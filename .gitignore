@@ -1,0 +1,11 @@
+.venv/
+__pycache__/
+*.pyc
+
+# Datos reales de alumnos/profesores (personal, sensible) — no se versiona.
+data/*.db
+backups/
+Docs/
+
+# Artefactos de prueba
+scratch_*.png
