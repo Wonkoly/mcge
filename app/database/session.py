@@ -10,9 +10,13 @@ engine = create_engine(f"sqlite:///{DB_PATH}", future=True)
 
 
 @event.listens_for(engine, "connect")
-def _enable_foreign_keys(dbapi_connection, _):
+def _configurar_conexion(dbapi_connection, _):
     cursor = dbapi_connection.cursor()
     cursor.execute("PRAGMA foreign_keys=ON")
+    # Con dos PCs escribiendo casi al mismo tiempo, sin esto un segundo
+    # escritor recibe "database is locked" de inmediato en vez de esperar
+    # su turno — con esto espera hasta 5s antes de fallar.
+    cursor.execute("PRAGMA busy_timeout=5000")
     cursor.close()
 
 
