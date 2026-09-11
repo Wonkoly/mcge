@@ -1,0 +1,65 @@
+{% extends "base.html" %}
+{% block titulo %}Nuevo aspirante{% endblock %}
+{% block contenido %}
+  <h1>Registrar aspirante</h1>
+  <p class="subtitulo">Alta manual. El nombre es obligatorio.</p>
+
+  <form class="formulario" method="post">
+    <div class="campo">
+      <label>Nombre completo *</label>
+      <input type="text" name="nombre" required>
+    </div>
+
+    <div class="fila-campos">
+      <div class="campo">
+        <label>Licenciatura</label>
+        <input type="text" name="licenciatura">
+      </div>
+      <div class="campo">
+        <label>Universidad de procedencia</label>
+        <input type="text" name="universidad">
+      </div>
+    </div>
+
+    <div class="fila-campos">
+      <div class="campo">
+        <label>Promedio</label>
+        <input type="number" step="0.01" name="promedio">
+      </div>
+      <div class="campo">
+        <label>Ciclo al que aplica</label>
+        <input type="text" name="ciclo" placeholder="ej. 2026 B">
+      </div>
+    </div>
+
+    <div class="fila-campos">
+      <div class="campo">
+        <label>Correo</label>
+        <input type="email" name="correo">
+      </div>
+      <div class="campo">
+        <label>Teléfono</label>
+        <input type="text" name="telefono">
+      </div>
+    </div>
+
+    <div class="campo">
+      <label>Estado</label>
+      <select name="estado">
+        {% for e in estados %}
+          <option value="{{ e }}">{{ e }}</option>
+        {% endfor %}
+      </select>
+    </div>
+
+    <div class="campo">
+      <label>Observaciones</label>
+      <textarea name="observaciones" rows="3"></textarea>
+    </div>
+
+    <div class="acciones-form">
+      <button class="btn" type="submit">Guardar aspirante</button>
+      <a class="btn btn-secundario" href="{{ url_for('aspirantes.listar') }}">Cancelar</a>
+    </div>
+  </form>
+{% endblock %}

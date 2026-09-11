@@ -1,0 +1,40 @@
+<!doctype html>
+<html lang="es">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>{% block titulo %}MCG{% endblock %} — Maestría en Geofísica</title>
+  <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+</head>
+<body>
+  <div class="app">
+    <aside class="sidebar">
+      <div class="marca">
+        <div class="marca-icono">MCG</div>
+        <div class="marca-texto">Gestión Académica</div>
+      </div>
+      <nav>
+        <a href="{{ url_for('dashboard.inicio') }}" class="{{ 'activo' if request.endpoint == 'dashboard.inicio' else '' }}">Panel</a>
+        <a href="{{ url_for('alumnos.listar') }}" class="{{ 'activo' if request.blueprint == 'alumnos' else '' }}">Alumnos</a>
+        <a href="{{ url_for('aspirantes.listar') }}" class="{{ 'activo' if request.blueprint == 'aspirantes' else '' }}">Aspirantes</a>
+        <a href="{{ url_for('profesores.listar') }}" class="{{ 'activo' if request.blueprint == 'profesores' else '' }}">Profesores</a>
+      </nav>
+      <div class="sidebar-pie">Maestría en Ciencias en Geofísica<br>CUC · Universidad de Guadalajara</div>
+    </aside>
+
+    <main class="contenido">
+      {% with mensajes = get_flashed_messages(with_categories=true) %}
+        {% if mensajes %}
+          <div class="mensajes">
+            {% for categoria, mensaje in mensajes %}
+              <div class="mensaje mensaje-{{ categoria }}">{{ mensaje }}</div>
+            {% endfor %}
+          </div>
+        {% endif %}
+      {% endwith %}
+
+      {% block contenido %}{% endblock %}
+    </main>
+  </div>
+</body>
+</html>

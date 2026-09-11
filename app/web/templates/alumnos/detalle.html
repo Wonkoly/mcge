@@ -1,0 +1,161 @@
+{% extends "base.html" %}
+{% block titulo %}{{ alumno.nombre }}{% endblock %}
+{% block contenido %}
+  <p><a href="{{ url_for('alumnos.listar') }}">&larr; Volver a alumnos</a></p>
+
+  <div class="expediente-cabecera">
+    <div class="nombre">{{ alumno.nombre }}</div>
+    <div class="meta">Código {{ alumno.codigo }} · Ciclo {{ alumno.ciclo_ingreso or "—" }} ·
+      <span class="badge badge-{{ alumno.status.categoria if alumno.status else '' }}">
+        {{ alumno.status.nombre if alumno.status else (alumno.status_codigo or "—") }}
+      </span>
+    </div>
+  </div>
+
+  <div class="tabs">
+    <button class="tab-boton activo" data-tab="datos">Datos generales</button>
+    <button class="tab-boton" data-tab="comite">Comité Tutorial</button>
+    <button class="tab-boton" data-tab="direccion">Dirección / Codirección</button>
+  </div>
+
+  <div id="tab-datos" class="tab-panel activo">
+    <div class="panel">
+      <dl class="datos">
+        <dt>Correo</dt><dd>{{ alumno.correo_institucional or alumno.correo_personal or "—" }}</dd>
+        <dt>Teléfono</dt><dd>{{ alumno.telefono or "—" }}</dd>
+        <dt>Créditos (acum. / faltan)</dt><dd>{{ alumno.creditos_acumulados if alumno.creditos_acumulados is not none else "—" }} / {{ alumno.creditos_faltantes if alumno.creditos_faltantes is not none else "—" }}</dd>
+        <dt>Promedio</dt><dd>{{ alumno.promedio if alumno.promedio is not none else "—" }}</dd>
+        <dt>LIES</dt><dd>{{ alumno.lies.nombre if alumno.lies else "—" }}</dd>
+        <dt>CVU</dt><dd>{{ alumno.cvu or "—" }}</dd>
+        <dt>Título de tesis</dt><dd>{{ alumno.tesis_titulo or "—" }}</dd>
+        <dt>Observaciones</dt><dd>{{ alumno.observaciones or "—" }}</dd>
+      </dl>
+    </div>
+  </div>
+
+  <div id="tab-comite" class="tab-panel">
+    <div class="panel">
+      <h2>Vigente</h2>
+      {% if comite %}
+        <p>Ciclo {{ comite.ciclo or "—" }} (desde {{ comite.fecha_inicio or "fecha desconocida" }})</p>
+        <ul class="lista-simple">
+          {% for m in comite.miembros %}<li>{{ m.profesor.nombre }}</li>{% endfor %}
+        </ul>
+      {% else %}
+        <p class="vacio">Sin comité tutorial asignado.</p>
+      {% endif %}
+    </div>
+
+    <div class="panel">
+      <h2>Asignar / cambiar comité tutorial</h2>
+      <form method="post" action="{{ url_for('alumnos.asignar_comite_route', alumno_id=alumno.id) }}" class="formulario">
+        <div class="campo">
+          <label>Ciclo</label>
+          <input type="text" name="ciclo" placeholder="ej. 2026 B">
+        </div>
+        <div class="campo">
+          <label>Miembros (2-3 profesores, sin cargo diferenciado)</label>
+          <div class="checklist-profesores">
+            {% set miembros_actuales = comite.miembros | map(attribute="profesor_id") | list if comite else [] %}
+            {% for p in profesores %}
+              <label>
+                <input type="checkbox" name="profesor_ids" value="{{ p.id }}" {{ "checked" if p.id in miembros_actuales else "" }}>
+                {{ p.nombre }}{{ "" if p.nucleo_academico else " (externo)" }}
+              </label>
+            {% endfor %}
+          </div>
+        </div>
+        <div class="acciones-form">
+          <button class="btn" type="submit">Guardar comité tutorial</button>
+        </div>
+      </form>
+    </div>
+
+    <div class="panel">
+      <h2>Historial</h2>
+      {% if historial_comite %}
+        <table>
+          <thead><tr><th>Desde</th><th>Estado</th><th>Ciclo</th><th>Miembros</th></tr></thead>
+          <tbody>
+            {% for c in historial_comite %}
+              <tr>
+                <td>{{ c.fecha_inicio or "desconocida" }}</td>
+                <td>{{ "Vigente" if c.vigente else "Cerrado " ~ c.fecha_fin }}</td>
+                <td>{{ c.ciclo or "—" }}</td>
+                <td>{{ c.miembros | map(attribute="profesor") | map(attribute="nombre") | join(", ") }}</td>
+              </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      {% else %}
+        <p class="vacio">Sin historial.</p>
+      {% endif %}
+    </div>
+  </div>
+
+  <div id="tab-direccion" class="tab-panel">
+    <div class="panel">
+      <h2>Vigente</h2>
+      <p>Director: <strong>{{ director.profesor.nombre if director else "—" }}</strong></p>
+      <p>Codirector: <strong>{{ codirector.profesor.nombre if codirector else "—" }}</strong></p>
+    </div>
+
+    <div class="panel">
+      <h2>Asignar / cambiar Director o Codirector</h2>
+      <form method="post" action="{{ url_for('alumnos.asignar_direccion_route', alumno_id=alumno.id) }}" class="formulario">
+        <div class="fila-campos">
+          <div class="campo">
+            <label>Rol</label>
+            <select name="rol">
+              <option value="Director">Director</option>
+              <option value="Codirector">Codirector</option>
+            </select>
+          </div>
+          <div class="campo">
+            <label>Profesor</label>
+            <select name="profesor_id">
+              {% for p in profesores %}
+                <option value="{{ p.id }}">{{ p.nombre }}{{ "" if p.nucleo_academico else " (externo)" }}</option>
+              {% endfor %}
+            </select>
+          </div>
+        </div>
+        <div class="acciones-form">
+          <button class="btn" type="submit">Guardar</button>
+        </div>
+      </form>
+    </div>
+
+    <div class="panel">
+      <h2>Historial</h2>
+      {% if historial_direccion %}
+        <table>
+          <thead><tr><th>Desde</th><th>Estado</th><th>Rol</th><th>Profesor</th></tr></thead>
+          <tbody>
+            {% for d in historial_direccion %}
+              <tr>
+                <td>{{ d.fecha_inicio or "desconocida" }}</td>
+                <td>{{ "Vigente" if d.vigente else "Cerrado " ~ d.fecha_fin }}</td>
+                <td>{{ d.rol }}</td>
+                <td>{{ d.profesor.nombre }}</td>
+              </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      {% else %}
+        <p class="vacio">Sin historial.</p>
+      {% endif %}
+    </div>
+  </div>
+
+  <script>
+    document.querySelectorAll(".tab-boton").forEach(function (boton) {
+      boton.addEventListener("click", function () {
+        document.querySelectorAll(".tab-boton").forEach(function (b) { b.classList.remove("activo"); });
+        document.querySelectorAll(".tab-panel").forEach(function (p) { p.classList.remove("activo"); });
+        boton.classList.add("activo");
+        document.getElementById("tab-" + boton.dataset.tab).classList.add("activo");
+      });
+    });
+  </script>
+{% endblock %}

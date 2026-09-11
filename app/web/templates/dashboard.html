@@ -1,0 +1,42 @@
+{% extends "base.html" %}
+{% block titulo %}Panel{% endblock %}
+{% block contenido %}
+  <h1>Panel</h1>
+  <p class="subtitulo">Resumen general del programa.</p>
+
+  <div class="tarjetas">
+    <div class="tarjeta">
+      <div class="valor">{{ stats.total_alumnos }}</div>
+      <div class="etiqueta">Alumnos totales</div>
+    </div>
+    <div class="tarjeta">
+      <div class="valor">{{ stats.activos }}</div>
+      <div class="etiqueta">Alumnos activos</div>
+    </div>
+    <div class="tarjeta">
+      <div class="valor">{{ stats.aspirantes_pendientes }}</div>
+      <div class="etiqueta">Aspirantes en proceso</div>
+    </div>
+    <div class="tarjeta">
+      <div class="valor">{{ stats.total_nucleo }} / {{ stats.total_profesores }}</div>
+      <div class="etiqueta">Núcleo académico / Profesores totales</div>
+    </div>
+  </div>
+
+  <div class="panel">
+    <h2>Alumnos por status</h2>
+    <table>
+      <thead><tr><th>Status</th><th>Alumnos</th></tr></thead>
+      <tbody>
+        {% for nombre, cantidad in stats.por_status %}
+          <tr><td>{{ nombre or "Sin status" }}</td><td>{{ cantidad }}</td></tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+
+  <div class="acciones-form">
+    <a href="{{ url_for('alumnos.nuevo') }}" class="btn">+ Agregar alumno</a>
+    <a href="{{ url_for('aspirantes.nuevo') }}" class="btn btn-secundario">+ Registrar aspirante</a>
+  </div>
+{% endblock %}

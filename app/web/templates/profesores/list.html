@@ -1,0 +1,31 @@
+{% extends "base.html" %}
+{% block titulo %}Profesores{% endblock %}
+{% block contenido %}
+  <div class="buscador-superior">
+    <div>
+      <h1>Profesores</h1>
+      <p class="subtitulo">{{ profesores|length }} registrados</p>
+    </div>
+    <a href="{{ url_for('profesores.nuevo') }}" class="btn">+ Agregar profesor</a>
+  </div>
+
+  <div class="panel">
+    <table>
+      <thead>
+        <tr><th>Nombre</th><th>Núcleo académico</th><th>Grado</th><th>Línea de investigación</th></tr>
+      </thead>
+      <tbody>
+        {% for p in profesores %}
+          <tr>
+            <td>{{ p.nombre }}</td>
+            <td>{% if p.nucleo_academico %}<span class="badge badge-activo">Sí</span>{% else %}<span class="badge">Externo</span>{% endif %}</td>
+            <td>{{ p.grado or "—" }}</td>
+            <td>{{ p.linea_investigacion or "—" }}</td>
+          </tr>
+        {% else %}
+          <tr><td colspan="4" class="vacio">No hay profesores registrados.</td></tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+{% endblock %}

@@ -1,0 +1,54 @@
+{% extends "base.html" %}
+{% block titulo %}Aspirantes{% endblock %}
+{% block contenido %}
+  <div class="buscador-superior">
+    <div>
+      <h1>Aspirantes</h1>
+      <p class="subtitulo">{{ aspirantes|length }} resultado(s)</p>
+    </div>
+    <a href="{{ url_for('aspirantes.nuevo') }}" class="btn">+ Registrar aspirante</a>
+  </div>
+
+  <form class="barra-busqueda" method="get">
+    <input type="text" name="q" value="{{ texto }}" placeholder="Buscar por nombre o universidad...">
+    <button class="btn btn-secundario" type="submit">Buscar</button>
+  </form>
+
+  <div class="panel">
+    <table>
+      <thead>
+        <tr><th>Nombre</th><th>Universidad</th><th>Ciclo</th><th>Estado</th><th></th></tr>
+      </thead>
+      <tbody>
+        {% for a in aspirantes %}
+          <tr>
+            <td>{{ a.nombre }}</td>
+            <td>{{ a.universidad or "—" }}</td>
+            <td>{{ a.ciclo or "—" }}</td>
+            <td>
+              <form method="post" action="{{ url_for('aspirantes.cambiar_estado_route', aspirante_id=a.id) }}" style="display:inline-flex; gap:6px;">
+                <select name="estado" onchange="this.form.submit()">
+                  {% for e in ["Registrado", "Documentación incompleta", "En evaluación", "Entrevista", "Aceptado", "No aceptado", "Inscrito"] %}
+                    <option value="{{ e }}" {{ "selected" if a.estado == e else "" }}>{{ e }}</option>
+                  {% endfor %}
+                </select>
+              </form>
+            </td>
+            <td>
+              {% if a.estado == "Aceptado" and not a.alumno_id %}
+                <form method="post" action="{{ url_for('aspirantes.aceptar_route', aspirante_id=a.id) }}" style="display:flex; gap:6px;">
+                  <input type="text" name="codigo_alumno" placeholder="Código de alumno" required style="width:140px;">
+                  <button class="btn btn-pequeno" type="submit">Convertir a alumno</button>
+                </form>
+              {% elif a.alumno_id %}
+                <a class="btn btn-pequeno btn-secundario" href="{{ url_for('alumnos.detalle', alumno_id=a.alumno_id) }}">Ver alumno</a>
+              {% endif %}
+            </td>
+          </tr>
+        {% else %}
+          <tr><td colspan="5" class="vacio">No se encontraron aspirantes.</td></tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+{% endblock %}

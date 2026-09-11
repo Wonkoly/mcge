@@ -1,0 +1,39 @@
+{% extends "base.html" %}
+{% block titulo %}Alumnos{% endblock %}
+{% block contenido %}
+  <div class="buscador-superior">
+    <div>
+      <h1>Alumnos</h1>
+      <p class="subtitulo">{{ alumnos|length }} resultado(s)</p>
+    </div>
+    <a href="{{ url_for('alumnos.nuevo') }}" class="btn">+ Agregar alumno</a>
+  </div>
+
+  <form class="barra-busqueda" method="get">
+    <input type="text" name="q" value="{{ texto }}" placeholder="Buscar por nombre o código...">
+    <button class="btn btn-secundario" type="submit">Buscar</button>
+  </form>
+
+  <div class="panel">
+    <table>
+      <thead>
+        <tr><th>Código</th><th>Nombre</th><th>Ciclo</th><th>Status</th></tr>
+      </thead>
+      <tbody>
+        {% for a in alumnos %}
+          <tr class="clicable" onclick="window.location='{{ url_for('alumnos.detalle', alumno_id=a.id) }}'">
+            <td>{{ a.codigo }}</td>
+            <td>{{ a.nombre }}</td>
+            <td>{{ a.ciclo_ingreso or "—" }}</td>
+            <td>
+              {% set cat = a.status.categoria if a.status else "" %}
+              <span class="badge badge-{{ cat }}">{{ a.status.nombre if a.status else (a.status_codigo or "—") }}</span>
+            </td>
+          </tr>
+        {% else %}
+          <tr><td colspan="4" class="vacio">No se encontraron alumnos.</td></tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+{% endblock %}
