@@ -1,0 +1,107 @@
+{% extends "base.html" %}
+{% block titulo %}{{ "Editar acta" if acta else "Nueva acta" }}{% endblock %}
+{% block contenido %}
+  <p><a href="{{ url_for('actas.listar') }}">&larr; Volver a actas</a></p>
+  <h1>{{ "Editar acta " ~ acta.numero if acta else "Nueva acta" }}</h1>
+  <p class="subtitulo">
+    Los puntos se numeran en el orden en que los agregues. Cada uno tiene un título (va en el
+    "ORDEN DEL DÍA" del documento) y un resolutivo (lo que se acordó, va en "RESOLUTIVOS").
+    No se generan tablas dentro de un punto (ej. listas de comité tutorial) — si hace falta, se
+    describen como texto dentro del resolutivo.
+  </p>
+
+  <form class="formulario" method="post" style="max-width: 800px;">
+    <div class="fila-campos">
+      <div class="campo">
+        <label>Número de acta *</label>
+        <input type="text" name="numero" value="{{ acta.numero if acta else '' }}" placeholder="ej. MCG/14/2026" required>
+      </div>
+      <div class="campo">
+        <label>Fecha</label>
+        <input type="date" name="fecha" value="{{ acta.fecha.isoformat() if acta and acta.fecha else '' }}">
+      </div>
+    </div>
+
+    <div class="fila-campos">
+      <div class="campo">
+        <label>Hora de inicio</label>
+        <input type="text" name="hora_inicio" placeholder="ej. 11:00" value="{{ acta.hora_inicio if acta else '' }}">
+      </div>
+      <div class="campo">
+        <label>Hora de cierre</label>
+        <input type="text" name="hora_fin" placeholder="ej. 12:00" value="{{ acta.hora_fin if acta else '' }}">
+      </div>
+    </div>
+
+    <div class="fila-campos">
+      <div class="campo">
+        <label>Lugar</label>
+        <input type="text" name="lugar" value="{{ acta.lugar if acta else 'Puerto Vallarta, Jalisco' }}">
+      </div>
+      <div class="campo">
+        <label>Sede (edificio/sala)</label>
+        <input type="text" name="sede" placeholder="ej. la Sala de Juntas" value="{{ acta.sede if acta else '' }}">
+      </div>
+    </div>
+
+    <div class="campo">
+      <label>Asistentes (texto libre)</label>
+      <input type="text" name="asistentes" placeholder="ej. el Coordinador Dr. X; las profesoras Y, Z" value="{{ acta.asistentes if acta else '' }}">
+    </div>
+
+    <div class="campo">
+      <label>Resumen (para la lista de actas, no aparece en el documento)</label>
+      <input type="text" name="resumen" value="{{ acta.resumen if acta else '' }}">
+    </div>
+
+    <hr style="border:none; border-top:1px solid var(--gris-borde); margin:8px 0;">
+
+    <div class="campo">
+      <label>Puntos del orden del día</label>
+      <div id="puntos-container">
+        {% if acta and acta.puntos %}
+          {% for p in acta.puntos %}
+            <div class="punto-fila panel" style="margin-bottom:12px;">
+              <div class="campo">
+                <label>Título del punto</label>
+                <input type="text" name="punto_titulo" value="{{ p.titulo }}">
+              </div>
+              <div class="campo">
+                <label>Resolutivo (lo que se acordó)</label>
+                <textarea name="punto_resolutivo" rows="2">{{ p.resolutivo or '' }}</textarea>
+              </div>
+              <button type="button" class="btn btn-secundario btn-pequeno" onclick="this.parentElement.remove()">Quitar punto</button>
+            </div>
+          {% endfor %}
+        {% endif %}
+      </div>
+      <button type="button" id="btn-agregar-punto" class="btn btn-secundario">+ Agregar punto</button>
+    </div>
+
+    <div class="acciones-form">
+      <button class="btn" type="submit">Guardar acta</button>
+      <a class="btn btn-secundario" href="{{ url_for('actas.listar') }}">Cancelar</a>
+    </div>
+  </form>
+
+  <template id="plantilla-punto">
+    <div class="punto-fila panel" style="margin-bottom:12px;">
+      <div class="campo">
+        <label>Título del punto</label>
+        <input type="text" name="punto_titulo">
+      </div>
+      <div class="campo">
+        <label>Resolutivo (lo que se acordó)</label>
+        <textarea name="punto_resolutivo" rows="2"></textarea>
+      </div>
+      <button type="button" class="btn btn-secundario btn-pequeno" onclick="this.parentElement.remove()">Quitar punto</button>
+    </div>
+  </template>
+
+  <script>
+    document.getElementById("btn-agregar-punto").addEventListener("click", function () {
+      var plantilla = document.getElementById("plantilla-punto").content.cloneNode(true);
+      document.getElementById("puntos-container").appendChild(plantilla);
+    });
+  </script>
+{% endblock %}

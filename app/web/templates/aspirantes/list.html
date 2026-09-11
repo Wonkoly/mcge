@@ -17,7 +17,7 @@
   <div class="panel">
     <table>
       <thead>
-        <tr><th>Nombre</th><th>Universidad</th><th>Ciclo</th><th>Estado</th><th></th></tr>
+        <tr><th>Nombre</th><th>Universidad</th><th>Ciclo</th><th>Estado</th><th></th><th></th></tr>
       </thead>
       <tbody>
         {% for a in aspirantes %}
@@ -44,9 +44,10 @@
                 <a class="btn btn-pequeno btn-secundario" href="{{ url_for('alumnos.detalle', alumno_id=a.alumno_id) }}">Ver alumno</a>
               {% endif %}
             </td>
+            <td><a class="btn btn-pequeno btn-secundario" href="{{ url_for('aspirantes.editar', aspirante_id=a.id) }}">Editar</a></td>
           </tr>
         {% else %}
-          <tr><td colspan="5" class="vacio">No se encontraron aspirantes.</td></tr>
+          <tr><td colspan="6" class="vacio">No se encontraron aspirantes.</td></tr>
         {% endfor %}
       </tbody>
     </table>

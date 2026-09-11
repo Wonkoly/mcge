@@ -3,13 +3,16 @@
 {% block contenido %}
   <p><a href="{{ url_for('alumnos.listar') }}">&larr; Volver a alumnos</a></p>
 
-  <div class="expediente-cabecera">
-    <div class="nombre">{{ alumno.nombre }}</div>
-    <div class="meta">Código {{ alumno.codigo }} · Ciclo {{ alumno.ciclo_ingreso or "—" }} ·
-      <span class="badge badge-{{ alumno.status.categoria if alumno.status else '' }}">
-        {{ alumno.status.nombre if alumno.status else (alumno.status_codigo or "—") }}
-      </span>
+  <div class="expediente-cabecera" style="display:flex; justify-content:space-between; align-items:flex-start;">
+    <div>
+      <div class="nombre">{{ alumno.nombre }}</div>
+      <div class="meta">Código {{ alumno.codigo }} · Ciclo {{ alumno.ciclo_ingreso or "—" }} ·
+        <span class="badge badge-{{ alumno.status.categoria if alumno.status else '' }}">
+          {{ alumno.status.nombre if alumno.status else (alumno.status_codigo or "—") }}
+        </span>
+      </div>
     </div>
+    <a class="btn btn-secundario btn-pequeno" href="{{ url_for('alumnos.editar', alumno_id=alumno.id) }}">Editar datos</a>
   </div>
 
   <div class="tabs">
@@ -99,6 +102,38 @@
       <p>Director: <strong>{{ director.profesor.nombre if director else "—" }}</strong></p>
       <p>Codirector: <strong>{{ codirector.profesor.nombre if codirector else "—" }}</strong></p>
     </div>
+
+    {% if director or codirector %}
+      <div class="panel">
+        <h2>Generar documento</h2>
+        <p class="subtitulo">Se genera como borrador .docx editable — revisa nombres/fechas antes de imprimir o firmar.</p>
+        {% for etiqueta, d in [("Director", director), ("Codirector", codirector)] %}
+          {% if d %}
+            <form method="post" action="{{ url_for('documentos.documento_direccion', direccion_id=d.id) }}" style="margin-bottom:16px; padding-bottom:16px; border-bottom:1px solid var(--gris-borde);">
+              <p style="margin:0 0 8px; font-weight:600;">{{ etiqueta }}: {{ d.profesor.nombre }}</p>
+              <div class="fila-campos">
+                <div class="campo">
+                  <label>Coordinador(a) que firma</label>
+                  <input type="text" name="coordinador_nombre" value="Dr. Héctor Javier Rendón Contreras">
+                </div>
+                <div class="campo">
+                  <label>Lema del ciclo (opcional)</label>
+                  <input type="text" name="lema_ciclo" placeholder='ej. "Año del..."'>
+                </div>
+              </div>
+              <div class="campo">
+                <label>Tratamiento del profesor (se usa tal cual en el documento)</label>
+                <input type="text" name="profesor_tratamiento_nombre" placeholder="ej. el Dr. {{ d.profesor.nombre }} — déjalo vacío para autodetectar">
+              </div>
+              <div class="acciones-form">
+                <button class="btn btn-pequeno" type="submit" name="tipo" value="oficio">Generar oficio de asignación</button>
+                <button class="btn btn-pequeno btn-secundario" type="submit" name="tipo" value="constancia">Generar constancia</button>
+              </div>
+            </form>
+          {% endif %}
+        {% endfor %}
+      </div>
+    {% endif %}
 
     <div class="panel">
       <h2>Asignar / cambiar Director o Codirector</h2>

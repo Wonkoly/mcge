@@ -5,7 +5,7 @@ from app.repositories.catalogo_repository import listar_lies, listar_status
 from app.repositories.comite_repository import comite_vigente, historial_comites
 from app.repositories.direccion_repository import direcciones_vigentes, historial_direcciones
 from app.repositories.profesor_repository import listar_profesores
-from app.services.alumno_service import CodigoDuplicadoError, crear_alumno
+from app.services.alumno_service import CodigoDuplicadoError, actualizar_alumno, crear_alumno
 from app.services.comite_service import asignar_comite_tutorial
 from app.services.direccion_service import asignar_direccion
 from app.web.db import get_session
@@ -35,6 +35,29 @@ def nuevo():
         except ValueError as exc:
             flash(str(exc), "error")
     return render_template("alumnos/nuevo.html", status_list=listar_status(session), lies_list=listar_lies(session))
+
+
+@bp.route("/<int:alumno_id>/editar", methods=["GET", "POST"])
+def editar(alumno_id):
+    session = get_session()
+    alumno = obtener_alumno(session, alumno_id)
+    if alumno is None:
+        flash("Alumno no encontrado.", "error")
+        return redirect(url_for("alumnos.listar"))
+
+    if request.method == "POST":
+        try:
+            actualizar_alumno(session, alumno, **request.form)
+            session.commit()
+            flash(f"Alumno {alumno.nombre} actualizado.", "exito")
+            return redirect(url_for("alumnos.detalle", alumno_id=alumno.id))
+        except CodigoDuplicadoError as exc:
+            flash(str(exc), "error")
+        except ValueError as exc:
+            flash(str(exc), "error")
+    return render_template(
+        "alumnos/editar.html", alumno=alumno, status_list=listar_status(session), lies_list=listar_lies(session)
+    )
 
 
 @bp.route("/<int:alumno_id>")

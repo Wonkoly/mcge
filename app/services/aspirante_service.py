@@ -29,6 +29,27 @@ def crear_aspirante(session: Session, *, usuario: str = "usuario", **campos) -> 
     return aspirante
 
 
+def actualizar_aspirante(session: Session, aspirante: Aspirante, *, usuario: str = "usuario", **campos) -> Aspirante:
+    nombre = (campos.get("nombre") or "").strip()
+    if not nombre:
+        raise ValueError("El nombre es obligatorio")
+
+    aspirante.nombre = nombre
+    aspirante.licenciatura = _o_none(campos.get("licenciatura"))
+    aspirante.universidad = _o_none(campos.get("universidad"))
+    aspirante.promedio = _a_float(campos.get("promedio"))
+    aspirante.correo = _o_none(campos.get("correo"))
+    aspirante.telefono = _o_none(campos.get("telefono"))
+    aspirante.ciclo = _o_none(campos.get("ciclo"))
+    aspirante.observaciones = _o_none(campos.get("observaciones"))
+    if "estado" in campos and campos.get("estado"):
+        aspirante.estado = campos["estado"]
+
+    session.flush()
+    registrar(session, usuario=usuario, entidad="Aspirante", entidad_id=aspirante.id, accion="modificar", valor_nuevo="datos actualizados")
+    return aspirante
+
+
 def cambiar_estado(session: Session, aspirante: Aspirante, nuevo_estado: str, *, usuario: str = "usuario") -> None:
     anterior = aspirante.estado
     aspirante.estado = nuevo_estado

@@ -34,6 +34,30 @@ def crear_profesor(session: Session, *, usuario: str = "usuario", **campos) -> P
     return profesor
 
 
+def actualizar_profesor(session: Session, profesor: Profesor, *, usuario: str = "usuario", **campos) -> Profesor:
+    nombre = limpiar_nombre((campos.get("nombre") or "").strip())
+    if not nombre:
+        raise ValueError("El nombre es obligatorio")
+
+    profesor.nombre = nombre
+    profesor.grado = _o_none(campos.get("grado"))
+    profesor.correo = _o_none(campos.get("correo"))
+    profesor.telefono = _o_none(campos.get("telefono"))
+    profesor.cvu = _o_none(campos.get("cvu"))
+    profesor.linea_investigacion = _o_none(campos.get("linea_investigacion"))
+    profesor.nucleo_academico = bool(campos.get("nucleo_academico"))
+    profesor.activo = bool(campos.get("activo", True))
+
+    try:
+        session.flush()
+    except IntegrityError as exc:
+        session.rollback()
+        raise NombreDuplicadoError(f"Ya existe un profesor con el nombre {nombre!r}") from exc
+
+    registrar(session, usuario=usuario, entidad="Profesor", entidad_id=profesor.id, accion="modificar", valor_nuevo="datos actualizados")
+    return profesor
+
+
 def _o_none(valor):
     if valor is None:
         return None

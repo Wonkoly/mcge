@@ -1,7 +1,7 @@
 from flask import Blueprint, flash, redirect, render_template, request, url_for
 
 from app.repositories.aspirante_repository import buscar_aspirantes, obtener_aspirante
-from app.services.aspirante_service import aceptar_aspirante, cambiar_estado, crear_aspirante
+from app.services.aspirante_service import aceptar_aspirante, actualizar_aspirante, cambiar_estado, crear_aspirante
 from app.web.db import get_session
 
 bp = Blueprint("aspirantes", __name__, url_prefix="/aspirantes")
@@ -37,6 +37,25 @@ def nuevo():
         except ValueError as exc:
             flash(str(exc), "error")
     return render_template("aspirantes/nuevo.html", estados=ESTADOS)
+
+
+@bp.route("/<int:aspirante_id>/editar", methods=["GET", "POST"])
+def editar(aspirante_id):
+    session = get_session()
+    aspirante = obtener_aspirante(session, aspirante_id)
+    if aspirante is None:
+        flash("Aspirante no encontrado.", "error")
+        return redirect(url_for("aspirantes.listar"))
+
+    if request.method == "POST":
+        try:
+            actualizar_aspirante(session, aspirante, **request.form)
+            session.commit()
+            flash(f"Aspirante {aspirante.nombre} actualizado.", "exito")
+            return redirect(url_for("aspirantes.listar"))
+        except ValueError as exc:
+            flash(str(exc), "error")
+    return render_template("aspirantes/editar.html", aspirante=aspirante, estados=ESTADOS)
 
 
 @bp.route("/<int:aspirante_id>/estado", methods=["POST"])

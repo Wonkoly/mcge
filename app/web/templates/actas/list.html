@@ -1,0 +1,31 @@
+{% extends "base.html" %}
+{% block titulo %}Actas{% endblock %}
+{% block contenido %}
+  <div class="buscador-superior">
+    <div>
+      <h1>Actas de Junta Académica</h1>
+      <p class="subtitulo">{{ actas|length }} registrada(s)</p>
+    </div>
+    <a href="{{ url_for('actas.nuevo') }}" class="btn">+ Nueva acta</a>
+  </div>
+
+  <div class="panel">
+    <table>
+      <thead>
+        <tr><th>Número</th><th>Fecha</th><th>Resumen</th><th>Puntos</th></tr>
+      </thead>
+      <tbody>
+        {% for a in actas %}
+          <tr class="clicable" onclick="window.location='{{ url_for('actas.detalle', acta_id=a.id) }}'">
+            <td>{{ a.numero }}</td>
+            <td>{{ a.fecha or "—" }}</td>
+            <td>{{ a.resumen or "—" }}</td>
+            <td>{{ a.puntos|length }}</td>
+          </tr>
+        {% else %}
+          <tr><td colspan="4" class="vacio">No hay actas registradas todavía.</td></tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+{% endblock %}

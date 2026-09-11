@@ -2,7 +2,7 @@ from app.models.base import Base
 from app.models.catalogos import StatusAlumno, Lies
 from app.models.profesor import Profesor, ProfesorAlias
 from app.models.alumno import Alumno
-from app.models.acta import Acta
+from app.models.acta import Acta, PuntoActa
 from app.models.direccion import Direccion
 from app.models.comite import ComiteTutorial, ComiteMiembro
 from app.models.lector import Lector
@@ -18,6 +18,7 @@ __all__ = [
     "ProfesorAlias",
     "Alumno",
     "Acta",
+    "PuntoActa",
     "Direccion",
     "ComiteTutorial",
     "ComiteMiembro",

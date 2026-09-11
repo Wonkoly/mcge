@@ -12,7 +12,7 @@
   <div class="panel">
     <table>
       <thead>
-        <tr><th>Nombre</th><th>Núcleo académico</th><th>Grado</th><th>Línea de investigación</th></tr>
+        <tr><th>Nombre</th><th>Núcleo académico</th><th>Grado</th><th>Línea de investigación</th><th></th></tr>
       </thead>
       <tbody>
         {% for p in profesores %}
@@ -21,9 +21,10 @@
             <td>{% if p.nucleo_academico %}<span class="badge badge-activo">Sí</span>{% else %}<span class="badge">Externo</span>{% endif %}</td>
             <td>{{ p.grado or "—" }}</td>
             <td>{{ p.linea_investigacion or "—" }}</td>
+            <td><a class="btn btn-pequeno btn-secundario" href="{{ url_for('profesores.editar', profesor_id=p.id) }}">Editar</a></td>
           </tr>
         {% else %}
-          <tr><td colspan="4" class="vacio">No hay profesores registrados.</td></tr>
+          <tr><td colspan="5" class="vacio">No hay profesores registrados.</td></tr>
         {% endfor %}
       </tbody>
     </table>

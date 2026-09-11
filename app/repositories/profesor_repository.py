@@ -10,6 +10,10 @@ def listar_profesores(session: Session, solo_activos: bool = True) -> list[Profe
     return query.order_by(Profesor.nombre).all()
 
 
+def obtener_profesor(session: Session, profesor_id: int) -> Profesor | None:
+    return session.get(Profesor, profesor_id)
+
+
 def contar_dirigidos_activos(session: Session, profesor_id: int) -> int:
     """Alumnos con dirección/codirección VIGENTE de este profesor. Usado
     para la regla oficial (≤4 estudiantes por profesor, hoja `estudiante -
