@@ -1,0 +1,83 @@
+{% extends "base.html" %}
+{% block titulo %}{{ profesor.nombre }}{% endblock %}
+{% block contenido %}
+  <p><a href="{{ url_for('profesores.listar') }}">&larr; Volver a profesores</a></p>
+
+  <div class="cabecera-pagina">
+    <div>
+      <div class="nombre" style="font-size:20px; font-weight:700;">{{ profesor.nombre }}</div>
+      <div class="meta" style="color:var(--texto-suave); font-size:13px; margin-top:2px;">
+        {{ profesor.grado or "Grado no capturado" }}
+        {% if profesor.nucleo_academico %} · <span class="badge badge-activo">Núcleo académico</span>{% else %} · <span class="badge">Externo</span>{% endif %}
+      </div>
+    </div>
+    <a href="{{ url_for('profesores.editar', profesor_id=profesor.id) }}" class="btn btn-secundario">Editar datos</a>
+  </div>
+
+  <div class="panel">
+    <dl class="datos">
+      <dt>Correo</dt><dd>{{ profesor.correo or "—" }}</dd>
+      <dt>Teléfono</dt><dd>{{ profesor.telefono or "—" }}</dd>
+      <dt>CVU</dt><dd>{{ profesor.cvu or "—" }}</dd>
+      <dt>Línea de investigación</dt><dd>{{ profesor.linea_investigacion or "—" }}</dd>
+      <dt>SNI</dt><dd>{{ profesor.sni or "—" }}</dd>
+      <dt>Dedicación</dt><dd>{{ profesor.dedicacion or "—" }}</dd>
+    </dl>
+  </div>
+
+  <div class="panel">
+    <h2>Dirección / Codirección de tesis ({{ direcciones|length }})</h2>
+    <p class="subtitulo">Alumnos que dirige o codirige, vigentes e histórico.</p>
+    {% if direcciones %}
+      {% for d in direcciones %}
+        <div style="margin-bottom:16px; padding-bottom:16px; border-bottom:1px solid var(--gris-borde);">
+          <p style="margin:0 0 8px;">
+            <strong>{{ d.rol }}</strong> de
+            <a href="{{ url_for('alumnos.detalle', alumno_id=d.alumno_id) }}">{{ d.alumno.nombre }}</a>
+            — {{ "Vigente" if d.vigente else "Cerrado " ~ d.fecha_fin }}
+            {% if d.alumno.tesis_titulo %}<br><span style="color:var(--texto-suave);">“{{ d.alumno.tesis_titulo }}”</span>{% endif %}
+          </p>
+          <form method="post" action="{{ url_for('documentos.documento_direccion', direccion_id=d.id) }}">
+            <div class="fila-campos">
+              <div class="campo">
+                <label>Coordinador(a) que firma</label>
+                <input type="text" name="coordinador_nombre" value="Dr. Héctor Javier Rendón Contreras">
+              </div>
+              <div class="campo">
+                <label>Lema del ciclo (opcional)</label>
+                <input type="text" name="lema_ciclo" placeholder='ej. "Año del..."'>
+              </div>
+            </div>
+            <div class="acciones-form">
+              <button class="btn btn-pequeno" type="submit" name="tipo" value="oficio">Generar oficio de asignación</button>
+              <button class="btn btn-pequeno btn-secundario" type="submit" name="tipo" value="constancia">Generar constancia</button>
+            </div>
+          </form>
+        </div>
+      {% endfor %}
+    {% else %}
+      <p class="vacio">No dirige ni codirige a ningún alumno.</p>
+    {% endif %}
+  </div>
+
+  <div class="panel">
+    <h2>Comité Tutorial ({{ membresias|length }})</h2>
+    <p class="subtitulo">Alumnos en cuyo comité tutorial participa, vigentes e histórico.</p>
+    {% if membresias %}
+      <table>
+        <thead><tr><th>Alumno</th><th>Ciclo</th><th>Estado</th></tr></thead>
+        <tbody>
+          {% for m in membresias %}
+            <tr>
+              <td><a href="{{ url_for('alumnos.detalle', alumno_id=m.comite.alumno_id) }}">{{ m.comite.alumno.nombre }}</a></td>
+              <td>{{ m.comite.ciclo or "—" }}</td>
+              <td>{{ "Vigente" if m.comite.vigente else "Cerrado " ~ m.comite.fecha_fin }}</td>
+            </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    {% else %}
+      <p class="vacio">No participa en ningún comité tutorial.</p>
+    {% endif %}
+  </div>
+{% endblock %}

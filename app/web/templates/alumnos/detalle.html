@@ -54,14 +54,15 @@
       <form method="post" action="{{ url_for('alumnos.asignar_comite_route', alumno_id=alumno.id) }}" class="formulario">
         <div class="campo">
           <label>Ciclo</label>
-          <input type="text" name="ciclo" placeholder="ej. 2026 B">
+          <input type="text" name="ciclo" value="{{ ciclo_sugerido }}">
         </div>
         <div class="campo">
           <label>Miembros (2-3 profesores, sin cargo diferenciado)</label>
-          <div class="checklist-profesores">
+          <input type="text" id="filtro-profesores-comite" placeholder="Buscar profesor por nombre..." style="margin-bottom:8px;">
+          <div class="checklist-profesores" id="lista-profesores-comite">
             {% set miembros_actuales = comite.miembros | map(attribute="profesor_id") | list if comite else [] %}
             {% for p in profesores %}
-              <label>
+              <label data-nombre="{{ p.nombre|lower }}">
                 <input type="checkbox" name="profesor_ids" value="{{ p.id }}" {{ "checked" if p.id in miembros_actuales else "" }}>
                 {{ p.nombre }}{{ "" if p.nucleo_academico else " (externo)" }}
               </label>
@@ -184,6 +185,17 @@
   </div>
 
   <script>
+    var filtroComite = document.getElementById("filtro-profesores-comite");
+    if (filtroComite) {
+      filtroComite.addEventListener("input", function () {
+        var texto = filtroComite.value.trim().toLowerCase();
+        document.querySelectorAll("#lista-profesores-comite label").forEach(function (etiqueta) {
+          var coincide = etiqueta.dataset.nombre.indexOf(texto) !== -1;
+          etiqueta.style.display = coincide ? "" : "none";
+        });
+      });
+    }
+
     document.querySelectorAll(".tab-boton").forEach(function (boton) {
       boton.addEventListener("click", function () {
         document.querySelectorAll(".tab-boton").forEach(function (b) { b.classList.remove("activo"); });

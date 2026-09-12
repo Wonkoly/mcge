@@ -1,12 +1,16 @@
+from sqlalchemy import or_
 from sqlalchemy.orm import Session
 
 from app.models import Direccion, Profesor
 
 
-def listar_profesores(session: Session, solo_activos: bool = True) -> list[Profesor]:
+def listar_profesores(session: Session, solo_activos: bool = True, texto: str = "") -> list[Profesor]:
     query = session.query(Profesor)
     if solo_activos:
         query = query.filter(Profesor.activo.is_(True))
+    if texto:
+        patron = f"%{texto}%"
+        query = query.filter(or_(Profesor.nombre.ilike(patron), Profesor.linea_investigacion.ilike(patron)))
     return query.order_by(Profesor.nombre).all()
 
 
