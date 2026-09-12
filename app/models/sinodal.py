@@ -22,6 +22,8 @@ class Sinodal(Base, TimestampMixin):
     profesor_id: Mapped[int] = mapped_column(ForeignKey("profesor.id"))
     cargo: Mapped[Optional[str]] = mapped_column(String(15))  # Presidente | Secretario | Vocal
     fecha_examen: Mapped[Optional[date]] = mapped_column(Date)
+    hora_examen: Mapped[Optional[str]] = mapped_column(String(10))
+    lugar_examen: Mapped[Optional[str]] = mapped_column(String(200))
     acta_id: Mapped[Optional[int]] = mapped_column(ForeignKey("acta.id"))
 
     alumno: Mapped["Alumno"] = relationship()

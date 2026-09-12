@@ -1,14 +1,23 @@
 import re
 
-from flask import Blueprint, flash, redirect, request, send_file, url_for
+from flask import Blueprint, flash, redirect, render_template, request, send_file, url_for
 
 from app.documents.generador import (
     generar_acta,
     generar_constancia_direccion,
+    generar_constancia_evaluador_aspirantes,
+    generar_constancia_jurado,
+    generar_constancia_lector,
+    generar_oficio_asentamiento_creditos,
+    generar_oficio_comite_tutorial_alumno,
+    generar_oficio_comite_tutorial_docente,
     generar_oficio_direccion,
+    generar_oficio_invitacion_jurado,
+    generar_oficio_permiso_municipio,
 )
-from app.models import Direccion
+from app.models import Alumno, ComiteTutorial, Direccion, Lector, Profesor, Sinodal
 from app.repositories.acta_repository import obtener_acta
+from app.repositories.profesor_repository import listar_profesores
 from app.services.configuracion_service import obtener as obtener_config
 from app.web.db import get_session
 
@@ -20,6 +29,26 @@ def _nombre_archivo(texto: str) -> str:
     return re.sub(r"[\s]+", "_", limpio) + ".docx"
 
 
+def _descargar(buffer, nombre_archivo):
+    return send_file(
+        buffer,
+        as_attachment=True,
+        download_name=nombre_archivo,
+        mimetype="application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+    )
+
+
+def _coordinador_y_lema(session):
+    coordinador_nombre = request.form.get("coordinador_nombre") or obtener_config(session, "coordinador_nombre")
+    lema_ciclo = request.form.get("lema_ciclo") or ""
+    return coordinador_nombre, lema_ciclo
+
+
+@bp.route("/")
+def index():
+    return render_template("documentos/index.html")
+
+
 @bp.route("/direccion/<int:direccion_id>", methods=["POST"])
 def documento_direccion(direccion_id):
     session = get_session()
@@ -29,11 +58,11 @@ def documento_direccion(direccion_id):
         return redirect(url_for("alumnos.listar"))
 
     tipo = request.form.get("tipo")
-    coordinador_nombre = request.form.get("coordinador_nombre") or obtener_config(session, "coordinador_nombre")
-    lema_ciclo = request.form.get("lema_ciclo") or ""
+    coordinador_nombre, lema_ciclo = _coordinador_y_lema(session)
     tratamiento_manual = request.form.get("profesor_tratamiento_nombre") or None
 
     kwargs = dict(
+        session=session,
         direccion=direccion,
         coordinador_nombre=coordinador_nombre,
         lema_ciclo=lema_ciclo,
@@ -50,12 +79,7 @@ def documento_direccion(direccion_id):
         flash("Tipo de documento no reconocido.", "error")
         return redirect(url_for("alumnos.detalle", alumno_id=direccion.alumno_id))
 
-    return send_file(
-        buffer,
-        as_attachment=True,
-        download_name=nombre_archivo,
-        mimetype="application/vnd.openxmlformats-officedocument.wordprocessingml.document",
-    )
+    return _descargar(buffer, nombre_archivo)
 
 
 @bp.route("/acta/<int:acta_id>", methods=["GET"])
@@ -69,11 +93,138 @@ def documento_acta(acta_id):
     coordinador_nombre = request.args.get("coordinador_nombre") or obtener_config(session, "coordinador_nombre")
     lema_ciclo = request.args.get("lema_ciclo") or ""
 
-    buffer = generar_acta(acta=acta, coordinador_nombre=coordinador_nombre, lema_ciclo=lema_ciclo)
-    nombre_archivo = _nombre_archivo(f"Acta {acta.numero}")
-    return send_file(
-        buffer,
-        as_attachment=True,
-        download_name=nombre_archivo,
-        mimetype="application/vnd.openxmlformats-officedocument.wordprocessingml.document",
-    )
+    buffer = generar_acta(session=session, acta=acta, coordinador_nombre=coordinador_nombre, lema_ciclo=lema_ciclo)
+    return _descargar(buffer, _nombre_archivo(f"Acta {acta.numero}"))
+
+
+@bp.route("/comite/<int:comite_id>", methods=["POST"])
+def documento_comite(comite_id):
+    session = get_session()
+    comite = session.get(ComiteTutorial, comite_id)
+    if comite is None:
+        flash("Comité tutorial no encontrado.", "error")
+        return redirect(url_for("alumnos.listar"))
+
+    coordinador_nombre, lema_ciclo = _coordinador_y_lema(session)
+    tipo = request.form.get("tipo")
+
+    if tipo == "alumno":
+        buffer = generar_oficio_comite_tutorial_alumno(
+            session=session, comite=comite, coordinador_nombre=coordinador_nombre, lema_ciclo=lema_ciclo
+        )
+        nombre_archivo = _nombre_archivo(f"Oficio Comite Tutorial Alumno {comite.alumno.nombre}")
+    elif tipo == "docente":
+        profesor_id = request.form.get("profesor_id", type=int)
+        profesor = session.get(Profesor, profesor_id) if profesor_id else None
+        if profesor is None:
+            flash("Selecciona a qué integrante del comité va dirigido el oficio.", "error")
+            return redirect(url_for("alumnos.detalle", alumno_id=comite.alumno_id))
+        buffer = generar_oficio_comite_tutorial_docente(
+            session=session, comite=comite, profesor_destinatario=profesor,
+            coordinador_nombre=coordinador_nombre, lema_ciclo=lema_ciclo,
+        )
+        nombre_archivo = _nombre_archivo(f"Oficio Comite Tutorial {profesor.nombre}")
+    else:
+        flash("Tipo de documento no reconocido.", "error")
+        return redirect(url_for("alumnos.detalle", alumno_id=comite.alumno_id))
+
+    return _descargar(buffer, nombre_archivo)
+
+
+@bp.route("/lector/<int:lector_id>", methods=["POST"])
+def documento_lector(lector_id):
+    session = get_session()
+    lector = session.get(Lector, lector_id)
+    if lector is None:
+        flash("Registro de lector no encontrado.", "error")
+        return redirect(url_for("alumnos.listar"))
+
+    coordinador_nombre, lema_ciclo = _coordinador_y_lema(session)
+    buffer = generar_constancia_lector(session=session, lector=lector, coordinador_nombre=coordinador_nombre, lema_ciclo=lema_ciclo)
+    return _descargar(buffer, _nombre_archivo(f"Constancia Lector {lector.profesor.nombre}"))
+
+
+@bp.route("/sinodal/<int:sinodal_id>", methods=["POST"])
+def documento_sinodal(sinodal_id):
+    session = get_session()
+    sinodal = session.get(Sinodal, sinodal_id)
+    if sinodal is None:
+        flash("Registro de sinodal no encontrado.", "error")
+        return redirect(url_for("alumnos.listar"))
+
+    coordinador_nombre, lema_ciclo = _coordinador_y_lema(session)
+    tipo = request.form.get("tipo")
+
+    if tipo == "constancia":
+        buffer = generar_constancia_jurado(session=session, sinodal=sinodal, coordinador_nombre=coordinador_nombre, lema_ciclo=lema_ciclo)
+        nombre_archivo = _nombre_archivo(f"Constancia Jurado {sinodal.profesor.nombre}")
+    elif tipo == "invitacion":
+        buffer = generar_oficio_invitacion_jurado(session=session, sinodal=sinodal, coordinador_nombre=coordinador_nombre, lema_ciclo=lema_ciclo)
+        nombre_archivo = _nombre_archivo(f"Oficio Invitacion Jurado {sinodal.profesor.nombre}")
+    else:
+        flash("Tipo de documento no reconocido.", "error")
+        return redirect(url_for("alumnos.detalle", alumno_id=sinodal.alumno_id))
+
+    return _descargar(buffer, nombre_archivo)
+
+
+@bp.route("/evaluador-aspirantes", methods=["GET", "POST"])
+def documento_evaluador_aspirantes():
+    session = get_session()
+    if request.method == "POST":
+        profesor = session.get(Profesor, request.form.get("profesor_id", type=int))
+        if profesor is None:
+            flash("Selecciona un profesor.", "error")
+            return redirect(url_for("documentos.documento_evaluador_aspirantes"))
+        coordinador_nombre, lema_ciclo = _coordinador_y_lema(session)
+        buffer = generar_constancia_evaluador_aspirantes(
+            session=session, profesor=profesor,
+            ciclo=request.form.get("ciclo", ""),
+            fecha_entrevista=request.form.get("fecha_entrevista", ""),
+            lugar=request.form.get("lugar", ""),
+            coordinador_nombre=coordinador_nombre, lema_ciclo=lema_ciclo,
+        )
+        return _descargar(buffer, _nombre_archivo(f"Constancia Evaluador Aspirantes {profesor.nombre}"))
+    return render_template("documentos/evaluador_aspirantes.html", profesores=listar_profesores(session))
+
+
+@bp.route("/asentamiento-creditos", methods=["GET", "POST"])
+def documento_asentamiento_creditos():
+    session = get_session()
+    if request.method == "POST":
+        alumno = session.get(Alumno, request.form.get("alumno_id", type=int))
+        if alumno is None:
+            flash("Selecciona un alumno.", "error")
+            return redirect(url_for("documentos.documento_asentamiento_creditos"))
+        coordinador_nombre, lema_ciclo = _coordinador_y_lema(session)
+        buffer = generar_oficio_asentamiento_creditos(
+            session=session, alumno=alumno,
+            materia_nombre=request.form.get("materia_nombre", ""),
+            materia_clave=request.form.get("materia_clave", ""),
+            creditos=request.form.get("creditos", type=int) or 0,
+            ciclo=request.form.get("ciclo", ""),
+            destinatario_nombre=request.form.get("destinatario_nombre") or "Coordinadora de Control Escolar",
+            coordinador_nombre=coordinador_nombre, lema_ciclo=lema_ciclo,
+        )
+        return _descargar(buffer, _nombre_archivo(f"Oficio Asentamiento Creditos {alumno.nombre}"))
+    from app.repositories.alumno_repository import buscar_alumnos
+
+    return render_template("documentos/asentamiento_creditos.html", alumnos=buscar_alumnos(session))
+
+
+@bp.route("/permiso-municipio", methods=["GET", "POST"])
+def documento_permiso_municipio():
+    session = get_session()
+    if request.method == "POST":
+        coordinador_nombre, lema_ciclo = _coordinador_y_lema(session)
+        buffer = generar_oficio_permiso_municipio(
+            session=session,
+            destinatario_nombre=request.form.get("destinatario_nombre", ""),
+            destinatario_cargo=request.form.get("destinatario_cargo", ""),
+            municipio=request.form.get("municipio", ""),
+            cuerpo_solicitud=request.form.get("cuerpo_solicitud", ""),
+            cuerpo_parrafo2=request.form.get("cuerpo_parrafo2", ""),
+            coordinador_nombre=coordinador_nombre, lema_ciclo=lema_ciclo,
+        )
+        return _descargar(buffer, _nombre_archivo(f"Oficio Permiso {request.form.get('municipio', '')}"))
+    return render_template("documentos/permiso_municipio.html")

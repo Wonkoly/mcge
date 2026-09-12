@@ -1,0 +1,29 @@
+{% extends "base.html" %}
+{% block titulo %}Solicitud de asentamiento de créditos{% endblock %}
+{% block contenido %}
+  <h1>Solicitud de asentamiento de créditos de trabajo de campo</h1>
+  <p class="subtitulo">Oficio a Control Escolar para que se asienten en Kardex los créditos de una materia por trabajo de campo comprobado.</p>
+
+  <form method="post" class="formulario">
+    <div class="campo">
+      <label>Alumno</label>
+      <select name="alumno_id" required>
+        {% for a in alumnos %}<option value="{{ a.id }}">{{ a.nombre }} ({{ a.codigo }})</option>{% endfor %}
+      </select>
+    </div>
+    <div class="fila-campos">
+      <div class="campo"><label>Materia</label><input type="text" name="materia_nombre" placeholder="ej. PROYECTO DE INVESTIGACIÓN DEL POSGRADO EN GEOFÍSICA" required></div>
+      <div class="campo"><label>Clave</label><input type="text" name="materia_clave" placeholder="ej. IF981" required></div>
+    </div>
+    <div class="fila-campos">
+      <div class="campo"><label>Créditos</label><input type="number" name="creditos" value="10" required></div>
+      <div class="campo"><label>Ciclo</label><input type="text" name="ciclo" placeholder="ej. 2026B" required></div>
+    </div>
+    <div class="campo"><label>Destinatario(a)</label><input type="text" name="destinatario_nombre" value="Coordinadora de Control Escolar"></div>
+    <div class="fila-campos">
+      <div class="campo"><label>Coordinador(a) que firma</label><input type="text" name="coordinador_nombre" value="{{ coordinador_default }}"></div>
+      <div class="campo"><label>Lema del ciclo (opcional)</label><input type="text" name="lema_ciclo"></div>
+    </div>
+    <div class="acciones-form"><button class="btn" type="submit">Generar oficio</button></div>
+  </form>
+{% endblock %}

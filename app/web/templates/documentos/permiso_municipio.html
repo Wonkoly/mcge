@@ -1,0 +1,27 @@
+{% extends "base.html" %}
+{% block titulo %}Solicitud de permiso/datos a municipio{% endblock %}
+{% block contenido %}
+  <h1>Solicitud de permiso/registro a autoridad municipal</h1>
+  <p class="subtitulo">Para trabajo de campo — el cuerpo es texto libre porque cada solicitud describe un proyecto de investigación distinto.</p>
+
+  <form method="post" class="formulario">
+    <div class="fila-campos">
+      <div class="campo"><label>Nombre del destinatario</label><input type="text" name="destinatario_nombre" required></div>
+      <div class="campo"><label>Cargo del destinatario</label><input type="text" name="destinatario_cargo" placeholder="ej. Director de Protección Civil" required></div>
+    </div>
+    <div class="campo"><label>Municipio</label><input type="text" name="municipio" placeholder="ej. Armería, Colima" required></div>
+    <div class="campo">
+      <label>Cuerpo de la solicitud (párrafo principal)</label>
+      <textarea name="cuerpo_solicitud" rows="6" required></textarea>
+    </div>
+    <div class="campo">
+      <label>Segundo párrafo (opcional)</label>
+      <textarea name="cuerpo_parrafo2" rows="4"></textarea>
+    </div>
+    <div class="fila-campos">
+      <div class="campo"><label>Coordinador(a) que firma</label><input type="text" name="coordinador_nombre" value="{{ coordinador_default }}"></div>
+      <div class="campo"><label>Lema del ciclo (opcional)</label><input type="text" name="lema_ciclo"></div>
+    </div>
+    <div class="acciones-form"><button class="btn" type="submit">Generar oficio</button></div>
+  </form>
+{% endblock %}

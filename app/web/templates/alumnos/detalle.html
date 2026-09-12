@@ -19,6 +19,7 @@
     <button class="tab-boton activo" data-tab="datos">Datos generales</button>
     <button class="tab-boton" data-tab="comite">Comité Tutorial</button>
     <button class="tab-boton" data-tab="direccion">Dirección / Codirección</button>
+    <button class="tab-boton" data-tab="titulacion">Titulación</button>
   </div>
 
   <div id="tab-datos" class="tab-panel activo">
@@ -44,6 +45,21 @@
         <ul class="lista-simple">
           {% for m in comite.miembros %}<li>{{ m.profesor.nombre }}</li>{% endfor %}
         </ul>
+        <div class="acciones-form" style="margin-top:12px; flex-wrap:wrap;">
+          <form method="post" action="{{ url_for('documentos.documento_comite', comite_id=comite.id) }}">
+            <input type="hidden" name="tipo" value="alumno">
+            <input type="hidden" name="coordinador_nombre" value="{{ coordinador_default }}">
+            <button class="btn btn-pequeno" type="submit">Generar oficio para el alumno</button>
+          </form>
+          {% for m in comite.miembros %}
+            <form method="post" action="{{ url_for('documentos.documento_comite', comite_id=comite.id) }}">
+              <input type="hidden" name="tipo" value="docente">
+              <input type="hidden" name="profesor_id" value="{{ m.profesor_id }}">
+              <input type="hidden" name="coordinador_nombre" value="{{ coordinador_default }}">
+              <button class="btn btn-pequeno btn-secundario" type="submit">Oficio para {{ m.profesor.nombre }}</button>
+            </form>
+          {% endfor %}
+        </div>
       {% else %}
         <p class="vacio">Sin comité tutorial asignado.</p>
       {% endif %}
@@ -180,6 +196,98 @@
         </table>
       {% else %}
         <p class="vacio">Sin historial.</p>
+      {% endif %}
+    </div>
+  </div>
+
+  <div id="tab-titulacion" class="tab-panel">
+    <div class="panel">
+      <h2>Lectores de tesis ({{ lectores|length }}/3)</h2>
+      <p class="subtitulo">Certifican que el documento de tesis está terminado — requisito para cargar los 10 créditos de "Trabajo de Tesis".</p>
+      {% for l in lectores %}
+        <div style="display:flex; justify-content:space-between; align-items:center; padding:8px 0; border-bottom:1px solid var(--gris-borde);">
+          <span>{{ l.profesor.nombre }}{% if l.fecha %} — {{ l.fecha }}{% endif %}</span>
+          <div style="display:flex; gap:6px;">
+            <form method="post" action="{{ url_for('documentos.documento_lector', lector_id=l.id) }}">
+              <input type="hidden" name="coordinador_nombre" value="{{ coordinador_default }}">
+              <button class="btn btn-pequeno btn-secundario" type="submit">Generar constancia</button>
+            </form>
+            <form method="post" action="{{ url_for('alumnos.quitar_lector_route', alumno_id=alumno.id, lector_id=l.id) }}" onsubmit="return confirm('¿Quitar este lector?');">
+              <button class="btn btn-pequeno btn-secundario" type="submit">Quitar</button>
+            </form>
+          </div>
+        </div>
+      {% else %}
+        <p class="vacio">Sin lectores asignados.</p>
+      {% endfor %}
+      {% if lectores|length < 3 %}
+        <form method="post" action="{{ url_for('alumnos.agregar_lector_route', alumno_id=alumno.id) }}" class="formulario" style="margin-top:16px;">
+          <div class="fila-campos">
+            <div class="campo">
+              <label>Profesor</label>
+              <select name="profesor_id">
+                {% for p in profesores %}<option value="{{ p.id }}">{{ p.nombre }}</option>{% endfor %}
+              </select>
+            </div>
+            <div class="campo">
+              <label>Fecha (opcional)</label>
+              <input type="date" name="fecha">
+            </div>
+          </div>
+          <div class="acciones-form"><button class="btn btn-pequeno" type="submit">Agregar lector</button></div>
+        </form>
+      {% endif %}
+    </div>
+
+    <div class="panel">
+      <h2>Sinodales / Jurado de examen ({{ sinodales|length }}/3)</h2>
+      {% for s in sinodales %}
+        <div style="display:flex; justify-content:space-between; align-items:center; padding:8px 0; border-bottom:1px solid var(--gris-borde);">
+          <span><strong>{{ s.cargo }}:</strong> {{ s.profesor.nombre }}{% if s.fecha_examen %} — examen {{ s.fecha_examen }}{% endif %}</span>
+          <div style="display:flex; gap:6px;">
+            <form method="post" action="{{ url_for('documentos.documento_sinodal', sinodal_id=s.id) }}">
+              <input type="hidden" name="tipo" value="invitacion">
+              <input type="hidden" name="coordinador_nombre" value="{{ coordinador_default }}">
+              <button class="btn btn-pequeno btn-secundario" type="submit">Oficio de invitación</button>
+            </form>
+            <form method="post" action="{{ url_for('documentos.documento_sinodal', sinodal_id=s.id) }}">
+              <input type="hidden" name="tipo" value="constancia">
+              <input type="hidden" name="coordinador_nombre" value="{{ coordinador_default }}">
+              <button class="btn btn-pequeno btn-secundario" type="submit">Constancia</button>
+            </form>
+            <form method="post" action="{{ url_for('alumnos.quitar_sinodal_route', alumno_id=alumno.id, sinodal_id=s.id) }}" onsubmit="return confirm('¿Quitar este sinodal?');">
+              <button class="btn btn-pequeno btn-secundario" type="submit">Quitar</button>
+            </form>
+          </div>
+        </div>
+      {% else %}
+        <p class="vacio">Sin sinodales asignados.</p>
+      {% endfor %}
+      {% if sinodales|length < 3 %}
+        <form method="post" action="{{ url_for('alumnos.agregar_sinodal_route', alumno_id=alumno.id) }}" class="formulario" style="margin-top:16px;">
+          <div class="fila-campos">
+            <div class="campo">
+              <label>Profesor</label>
+              <select name="profesor_id">
+                {% for p in profesores %}<option value="{{ p.id }}">{{ p.nombre }}</option>{% endfor %}
+              </select>
+            </div>
+            <div class="campo">
+              <label>Cargo</label>
+              <select name="cargo">
+                <option value="Presidente">Presidente</option>
+                <option value="Secretario">Secretario</option>
+                <option value="Vocal">Vocal</option>
+              </select>
+            </div>
+          </div>
+          <div class="fila-campos">
+            <div class="campo"><label>Fecha de examen</label><input type="date" name="fecha_examen"></div>
+            <div class="campo"><label>Hora</label><input type="text" name="hora_examen" placeholder="ej. 11:00"></div>
+          </div>
+          <div class="campo"><label>Lugar</label><input type="text" name="lugar_examen" placeholder="ej. Edificio de Ciencias de la Tierra, aula A001"></div>
+          <div class="acciones-form"><button class="btn btn-pequeno" type="submit">Agregar sinodal</button></div>
+        </form>
       {% endif %}
     </div>
   </div>

@@ -23,6 +23,7 @@
         <a href="{{ url_for('aspirantes.listar') }}" class="{{ 'activo' if request.blueprint == 'aspirantes' else '' }}">Aspirantes</a>
         <a href="{{ url_for('profesores.listar') }}" class="{{ 'activo' if request.blueprint == 'profesores' else '' }}">Profesores</a>
         <a href="{{ url_for('actas.listar') }}" class="{{ 'activo' if request.blueprint == 'actas' else '' }}">Actas</a>
+        <a href="{{ url_for('documentos.index') }}" class="{{ 'activo' if request.blueprint == 'documentos' else '' }}">Documentos</a>
         <a href="{{ url_for('configuracion.index') }}" class="{{ 'activo' if request.blueprint == 'configuracion' else '' }}">Configuración</a>
       </nav>
       <div class="sidebar-pie">Maestría en Ciencias en Geofísica<br>CUC · Universidad de Guadalajara</div>

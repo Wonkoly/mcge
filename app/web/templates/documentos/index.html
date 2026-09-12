@@ -1,0 +1,19 @@
+{% extends "base.html" %}
+{% block titulo %}Documentos{% endblock %}
+{% block contenido %}
+  <h1>Documentos sueltos</h1>
+  <p class="subtitulo">
+    Generadores que no dependen del expediente de un alumno en particular.
+    Los demás (oficio/constancia de dirección, comité tutorial, lectores,
+    sinodales) se generan desde la pestaña correspondiente en el expediente
+    del alumno, o desde "Observar" en el perfil del profesor.
+  </p>
+
+  <div class="panel">
+    <ul class="lista-simple">
+      <li><a href="{{ url_for('documentos.documento_evaluador_aspirantes') }}">Constancia de evaluador(a) de aspirantes</a></li>
+      <li><a href="{{ url_for('documentos.documento_asentamiento_creditos') }}">Solicitud de asentamiento de créditos de trabajo de campo</a></li>
+      <li><a href="{{ url_for('documentos.documento_permiso_municipio') }}">Solicitud de permiso/datos a autoridad municipal</a></li>
+    </ul>
+  </div>
+{% endblock %}

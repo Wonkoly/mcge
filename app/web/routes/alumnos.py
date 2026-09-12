@@ -1,14 +1,17 @@
 from flask import Blueprint, flash, redirect, render_template, request, url_for
 
+from app.models import Lector, Sinodal
 from app.repositories.alumno_repository import buscar_alumnos, obtener_alumno
 from app.repositories.catalogo_repository import listar_lies, listar_status
 from app.repositories.comite_repository import comite_vigente, historial_comites
 from app.repositories.direccion_repository import direcciones_vigentes, historial_direcciones
 from app.repositories.profesor_repository import listar_profesores
+from app.repositories.titulacion_repository import lectores_de_alumno, sinodales_de_alumno
 from app.services.alumno_service import CodigoDuplicadoError, actualizar_alumno, crear_alumno
 from app.services.comite_service import asignar_comite_tutorial
 from app.services.direccion_service import asignar_direccion
 from app.services.configuracion_service import ciclo_escolar_vigente
+from app.services.titulacion_service import agregar_lector, agregar_sinodal, quitar_lector, quitar_sinodal
 from app.web.db import get_session
 
 bp = Blueprint("alumnos", __name__, url_prefix="/alumnos")
@@ -84,6 +87,8 @@ def detalle(alumno_id):
         historial_direccion=historial_direcciones(session, alumno_id),
         profesores=listar_profesores(session),
         ciclo_sugerido=ciclo_escolar_vigente(session),
+        lectores=lectores_de_alumno(session, alumno_id),
+        sinodales=sinodales_de_alumno(session, alumno_id),
     )
 
 
@@ -116,4 +121,58 @@ def asignar_comite_route(alumno_id):
     asignar_comite_tutorial(session, alumno_id=alumno_id, profesor_ids=profesor_ids, ciclo=ciclo)
     session.commit()
     flash("Comité tutorial actualizado.", "exito")
+    return redirect(url_for("alumnos.detalle", alumno_id=alumno_id))
+
+
+@bp.route("/<int:alumno_id>/lector", methods=["POST"])
+def agregar_lector_route(alumno_id):
+    session = get_session()
+    profesor_id = request.form.get("profesor_id", type=int)
+    if not profesor_id:
+        flash("Selecciona un profesor para el lector.", "error")
+        return redirect(url_for("alumnos.detalle", alumno_id=alumno_id))
+    agregar_lector(session, alumno_id=alumno_id, profesor_id=profesor_id, fecha=request.form.get("fecha"))
+    session.commit()
+    flash("Lector agregado.", "exito")
+    return redirect(url_for("alumnos.detalle", alumno_id=alumno_id))
+
+
+@bp.route("/<int:alumno_id>/lector/<int:lector_id>/quitar", methods=["POST"])
+def quitar_lector_route(alumno_id, lector_id):
+    session = get_session()
+    lector = session.get(Lector, lector_id)
+    if lector and lector.alumno_id == alumno_id:
+        quitar_lector(session, lector)
+        session.commit()
+        flash("Lector eliminado.", "exito")
+    return redirect(url_for("alumnos.detalle", alumno_id=alumno_id))
+
+
+@bp.route("/<int:alumno_id>/sinodal", methods=["POST"])
+def agregar_sinodal_route(alumno_id):
+    session = get_session()
+    profesor_id = request.form.get("profesor_id", type=int)
+    cargo = request.form.get("cargo")
+    if not profesor_id or not cargo:
+        flash("Selecciona profesor y cargo para el sinodal.", "error")
+        return redirect(url_for("alumnos.detalle", alumno_id=alumno_id))
+    agregar_sinodal(
+        session, alumno_id=alumno_id, profesor_id=profesor_id, cargo=cargo,
+        fecha_examen=request.form.get("fecha_examen"),
+        hora_examen=request.form.get("hora_examen"),
+        lugar_examen=request.form.get("lugar_examen"),
+    )
+    session.commit()
+    flash("Sinodal agregado.", "exito")
+    return redirect(url_for("alumnos.detalle", alumno_id=alumno_id))
+
+
+@bp.route("/<int:alumno_id>/sinodal/<int:sinodal_id>/quitar", methods=["POST"])
+def quitar_sinodal_route(alumno_id, sinodal_id):
+    session = get_session()
+    sinodal = session.get(Sinodal, sinodal_id)
+    if sinodal and sinodal.alumno_id == alumno_id:
+        quitar_sinodal(session, sinodal)
+        session.commit()
+        flash("Sinodal eliminado.", "exito")
     return redirect(url_for("alumnos.detalle", alumno_id=alumno_id))

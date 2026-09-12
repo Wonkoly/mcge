@@ -248,5 +248,9 @@ def construir_acta():
 
 if __name__ == "__main__":
     construir_oficio_asignacion()
-    construir_constancia_direccion()
+    # construir_constancia_direccion() — SUPERADA 2026-09-12 por
+    # constancia_director_individual.docx (scripts/construir_plantillas_lote2.py),
+    # editada a partir de un machote real del coordinador en vez de reconstruida
+    # desde cero. Se deja la función arriba como referencia histórica, no se
+    # vuelve a generar ni a usar desde app/documents/generador.py.
     construir_acta()

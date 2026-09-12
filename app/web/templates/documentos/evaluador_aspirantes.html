@@ -1,0 +1,25 @@
+{% extends "base.html" %}
+{% block titulo %}Constancia de evaluador de aspirantes{% endblock %}
+{% block contenido %}
+  <h1>Constancia de evaluador(a) de aspirantes</h1>
+  <p class="subtitulo">Para el profesor que participó en la entrevista/evaluación de aspirantes de un ciclo — no está ligada a un aspirante en particular.</p>
+
+  <form method="post" class="formulario">
+    <div class="campo">
+      <label>Profesor</label>
+      <select name="profesor_id" required>
+        {% for p in profesores %}<option value="{{ p.id }}">{{ p.nombre }}</option>{% endfor %}
+      </select>
+    </div>
+    <div class="fila-campos">
+      <div class="campo"><label>Ciclo escolar</label><input type="text" name="ciclo" placeholder="ej. 2026 B" required></div>
+      <div class="campo"><label>Fecha de la entrevista (opcional)</label><input type="text" name="fecha_entrevista" placeholder="ej. 03 de diciembre de 2026"></div>
+    </div>
+    <div class="campo"><label>Lugar (opcional)</label><input type="text" name="lugar" placeholder="ej. aula 001 del edificio de Estudios de Ciencia de la Tierra"></div>
+    <div class="fila-campos">
+      <div class="campo"><label>Coordinador(a) que firma</label><input type="text" name="coordinador_nombre" value="{{ coordinador_default }}"></div>
+      <div class="campo"><label>Lema del ciclo (opcional)</label><input type="text" name="lema_ciclo"></div>
+    </div>
+    <div class="acciones-form"><button class="btn" type="submit">Generar constancia</button></div>
+  </form>
+{% endblock %}

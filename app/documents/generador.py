@@ -1,16 +1,24 @@
 """Genera documentos .docx (oficios, constancias, actas) a partir de las
-plantillas en templates_docx/, construidas a partir de la estructura real
-de Docs/Oficios y Docs/Constancias — ver scripts/construir_plantillas.py.
+plantillas en templates_docx/ — construidas EDITANDO archivos reales
+(machotes propios del coordinador cuando existían, o documentos ya
+emitidos generalizados) en vez de reconstruir el formato desde código, ver
+scripts/construir_plantillas.py y scripts/construir_plantillas_lote2.py.
 
 Nombre del coordinador y el lema del ciclo NO están fijos en el código:
-se piden en el formulario de generación (el coordinador puede cambiar con
-el tiempo, y el lema institucional cambia cada año)."""
+viven en Configuración (app/services/configuracion_service.py) y se
+precargan en el formulario, editable ahí mismo.
+
+El folio de cada documento se pide con app/services/folio_service.py
+(incremento atómico) — nunca se calcula aquí a mano, así dos PCs pidiendo
+folio del mismo tipo casi al mismo tiempo no pueden chocar."""
 
 from datetime import date
 from io import BytesIO
 
 from docxtpl import DocxTemplate
+from sqlalchemy.orm import Session
 
+from app.services.folio_service import siguiente_folio_formateado
 from app.utils.rutas import directorio_recursos
 
 TEMPLATES_DIR = directorio_recursos() / "app" / "documents" / "templates_docx"
@@ -73,6 +81,26 @@ def tratamiento_con_nombre(grado: str | None, nombre: str) -> str:
     return nombre
 
 
+def _a_contraido(nombre_con_tratamiento: str) -> str:
+    """"A el Dr. X" no es español correcto — es "Al Dr. X". Si el nombre
+    no trae artículo (o es femenino, "la Dra. X"), "A " normal sí aplica."""
+    if nombre_con_tratamiento.startswith("el "):
+        return "Al " + nombre_con_tratamiento[3:]
+    return f"A {nombre_con_tratamiento}"
+
+
+def _nombre_con_tratamiento(profesor) -> str:
+    return tratamiento_con_nombre(profesor.grado, formatear_nombre(profesor.nombre))
+
+
+def _acta_referencia(acta) -> str:
+    if not acta:
+        return ""
+    if acta.fecha:
+        return f"Acta {acta.numero} con fecha del {fecha_larga(acta.fecha)}"
+    return f"Acta {acta.numero}"
+
+
 def _render(nombre_plantilla: str, contexto: dict) -> BytesIO:
     tpl = DocxTemplate(str(TEMPLATES_DIR / nombre_plantilla))
     tpl.render(contexto)
@@ -82,7 +110,7 @@ def _render(nombre_plantilla: str, contexto: dict) -> BytesIO:
     return buffer
 
 
-def _campos_rol(direccion, profesor_tratamiento_nombre: str | None = None):
+def _campos_rol(direccion):
     femenino = es_femenino(direccion.profesor.grado)
     if direccion.rol == "Director":
         rol_texto_largo = "Directora" if femenino else "Director"
@@ -94,23 +122,19 @@ def _campos_rol(direccion, profesor_tratamiento_nombre: str | None = None):
     return rol_texto_largo, rol_corto, articulo_del_rol
 
 
-def generar_oficio_direccion(
-    *, direccion, coordinador_nombre: str, lema_ciclo: str = "", profesor_tratamiento_nombre: str | None = None
-) -> BytesIO:
-    """`direccion` es un objeto app.models.Direccion (con .alumno, .profesor, .rol, .acta).
-    `profesor_tratamiento_nombre` (ej. "el Dr. Fulano de Tal") viene del
-    formulario — se precarga con una heurística pero el usuario puede
-    corregirlo antes de generar."""
-    rol_texto_largo, rol_corto, articulo_del_rol = _campos_rol(direccion)
+# ---------------------------------------------------------------- Dirección
 
+def generar_oficio_direccion(
+    *, session: Session, direccion, coordinador_nombre: str, lema_ciclo: str = "", profesor_tratamiento_nombre: str | None = None
+) -> BytesIO:
+    rol_texto_largo, rol_corto, articulo_del_rol = _campos_rol(direccion)
     contexto = {
-        "oficio_numero": f"CUCPV/MCG/___/{date.today().year}",
+        "oficio_numero": siguiente_folio_formateado(session, "oficio_direccion", "oficio"),
         "alumno_nombre": formatear_nombre(direccion.alumno.nombre),
         "rol_texto": rol_texto_largo,
         "rol_texto_corto": rol_corto,
         "articulo_del_rol": articulo_del_rol,
-        "profesor_nombre": profesor_tratamiento_nombre
-        or tratamiento_con_nombre(direccion.profesor.grado, formatear_nombre(direccion.profesor.nombre)),
+        "profesor_nombre": profesor_tratamiento_nombre or _nombre_con_tratamiento(direccion.profesor),
         "tesis_titulo": direccion.alumno.tesis_titulo or "",
         "acta_numero": direccion.acta.numero if direccion.acta else "",
         "acta_fecha": fecha_larga(direccion.acta.fecha) if direccion.acta and direccion.acta.fecha else "",
@@ -122,26 +146,187 @@ def generar_oficio_direccion(
 
 
 def generar_constancia_direccion(
-    *, direccion, coordinador_nombre: str, lema_ciclo: str = "", profesor_tratamiento_nombre: str | None = None
+    *, session: Session, direccion, coordinador_nombre: str, lema_ciclo: str = "", profesor_tratamiento_nombre: str | None = None
 ) -> BytesIO:
     rol_texto_largo, _, _ = _campos_rol(direccion)
-
     contexto = {
-        "constancia_numero": f"MCG/___/{date.today().year}",
+        "constancia_numero": siguiente_folio_formateado(session, "constancia_direccion", "constancia"),
         "coordinador_nombre": coordinador_nombre,
-        "profesor_nombre": profesor_tratamiento_nombre
-        or tratamiento_con_nombre(direccion.profesor.grado, formatear_nombre(direccion.profesor.nombre)),
+        "profesor_nombre": profesor_tratamiento_nombre or _nombre_con_tratamiento(direccion.profesor),
         "rol_texto": rol_texto_largo,
         "alumno_nombre": formatear_nombre(direccion.alumno.nombre),
+        "alumno_codigo": direccion.alumno.codigo,
         "tesis_titulo": direccion.alumno.tesis_titulo or "",
-        "fecha_defensa": "",
+        "fecha_grado": fecha_larga(direccion.alumno.fecha_grado) if direccion.alumno.fecha_grado else "",
         "lema_ciclo": lema_ciclo,
         "fecha_larga": fecha_larga(),
     }
-    return _render("constancia_direccion.docx", contexto)
+    return _render("constancia_director_individual.docx", contexto)
 
 
-def generar_acta(*, acta, coordinador_nombre: str, lema_ciclo: str = "") -> BytesIO:
+# ------------------------------------------------------------ Comité tutorial
+
+def generar_oficio_comite_tutorial_alumno(*, session: Session, comite, coordinador_nombre: str, lema_ciclo: str = "") -> BytesIO:
+    """`comite` es un ComiteTutorial con `.miembros` (lista de ComiteMiembro)."""
+    contexto = {
+        "oficio_numero": siguiente_folio_formateado(session, "oficio_comite_tutorial", "oficio"),
+        "alumno_nombre": formatear_nombre(comite.alumno.nombre),
+        "alumno_codigo": comite.alumno.codigo,
+        "acta_referencia": _acta_referencia(comite.acta),
+        "comite_miembros": [_nombre_con_tratamiento(m.profesor) for m in comite.miembros],
+        "lema_ciclo": lema_ciclo,
+        "fecha_larga": fecha_larga(),
+        "coordinador_nombre": coordinador_nombre,
+    }
+    return _render("oficio_comite_tutorial_alumno.docx", contexto)
+
+
+def generar_oficio_comite_tutorial_docente(
+    *, session: Session, comite, profesor_destinatario, coordinador_nombre: str, lema_ciclo: str = ""
+) -> BytesIO:
+    """Una carta por cada miembro del comité — `profesor_destinatario` es a
+    quien va dirigida esta copia; `otros_miembros` son los demás (sin él)."""
+    otros = [_nombre_con_tratamiento(m.profesor) for m in comite.miembros if m.profesor_id != profesor_destinatario.id]
+    contexto = {
+        "oficio_numero": siguiente_folio_formateado(session, "oficio_comite_tutorial", "oficio"),
+        "profesor_tratamiento_nombre": _nombre_con_tratamiento(profesor_destinatario),
+        "acta_referencia": _acta_referencia(comite.acta),
+        "otros_miembros": otros,
+        "alumno_nombre": formatear_nombre(comite.alumno.nombre),
+        "alumno_codigo": comite.alumno.codigo,
+        "lema_ciclo": lema_ciclo,
+        "fecha_larga": fecha_larga(),
+        "coordinador_nombre": coordinador_nombre,
+    }
+    return _render("oficio_comite_tutorial_docente.docx", contexto)
+
+
+# ------------------------------------------------------------------- Lector
+
+def generar_constancia_lector(*, session: Session, lector, coordinador_nombre: str, lema_ciclo: str = "") -> BytesIO:
+    contexto = {
+        "constancia_numero": siguiente_folio_formateado(session, "constancia_lector", "constancia"),
+        "coordinador_nombre": coordinador_nombre,
+        "profesor_nombre": _nombre_con_tratamiento(lector.profesor),
+        "alumno_nombre": formatear_nombre(lector.alumno.nombre),
+        "alumno_codigo": lector.alumno.codigo,
+        "tesis_titulo": lector.alumno.tesis_titulo or "",
+        "lema_ciclo": lema_ciclo,
+        "fecha_larga": fecha_larga(),
+    }
+    return _render("constancia_lector.docx", contexto)
+
+
+# ------------------------------------------------------------------ Sinodal
+
+def generar_constancia_jurado(*, session: Session, sinodal, coordinador_nombre: str, lema_ciclo: str = "") -> BytesIO:
+    nombre_tratado = _nombre_con_tratamiento(sinodal.profesor)
+    contexto = {
+        "constancia_numero": siguiente_folio_formateado(session, "constancia_jurado", "constancia"),
+        "coordinador_nombre": coordinador_nombre,
+        "profesor_nombre": nombre_tratado,
+        "a_profesor": _a_contraido(nombre_tratado),
+        "cargo_texto": sinodal.cargo or "Vocal",
+        "alumno_nombre": formatear_nombre(sinodal.alumno.nombre),
+        "alumno_codigo": sinodal.alumno.codigo,
+        "fecha_examen": fecha_larga(sinodal.fecha_examen) if sinodal.fecha_examen else "",
+        "tesis_titulo": sinodal.alumno.tesis_titulo or "",
+        "lema_ciclo": lema_ciclo,
+        "fecha_larga": fecha_larga(),
+    }
+    return _render("constancia_jurado.docx", contexto)
+
+
+def generar_oficio_invitacion_jurado(*, session: Session, sinodal, coordinador_nombre: str, lema_ciclo: str = "") -> BytesIO:
+    contexto = {
+        "oficio_numero": siguiente_folio_formateado(session, "oficio_invitacion_jurado", "oficio"),
+        "profesor_tratamiento_nombre": _nombre_con_tratamiento(sinodal.profesor),
+        "acta_referencia": _acta_referencia(sinodal.acta),
+        "cargo_texto": sinodal.cargo or "Vocal",
+        "alumno_nombre": formatear_nombre(sinodal.alumno.nombre),
+        "alumno_codigo": sinodal.alumno.codigo,
+        "tesis_titulo": sinodal.alumno.tesis_titulo or "",
+        "fecha_examen": fecha_larga(sinodal.fecha_examen) if sinodal.fecha_examen else "",
+        "hora_examen": sinodal.hora_examen or "",
+        "lugar_examen": sinodal.lugar_examen or "",
+        "lema_ciclo": lema_ciclo,
+        "fecha_larga": fecha_larga(),
+        "coordinador_nombre": coordinador_nombre,
+    }
+    return _render("oficio_invitacion_jurado.docx", contexto)
+
+
+# --------------------------------------------------------------- Aspirantes
+
+def generar_constancia_evaluador_aspirantes(
+    *, session: Session, profesor, ciclo: str, coordinador_nombre: str,
+    fecha_entrevista: str = "", lugar: str = "", lema_ciclo: str = "",
+) -> BytesIO:
+    nombre_tratado = _nombre_con_tratamiento(profesor)
+    contexto = {
+        "constancia_numero": siguiente_folio_formateado(session, "constancia_evaluador_aspirantes", "constancia"),
+        "coordinador_nombre": coordinador_nombre,
+        "profesor_nombre": nombre_tratado,
+        "a_profesor": _a_contraido(nombre_tratado),
+        "ciclo": ciclo,
+        "fecha_entrevista": fecha_entrevista,
+        "lugar": lugar,
+        "lema_ciclo": lema_ciclo,
+        "fecha_larga": fecha_larga(),
+    }
+    return _render("constancia_evaluador_aspirantes.docx", contexto)
+
+
+# ----------------------------------------------------- Trabajo de campo / SEP
+
+def generar_oficio_asentamiento_creditos(
+    *, session: Session, alumno, materia_nombre: str, materia_clave: str, creditos: int, ciclo: str,
+    coordinador_nombre: str, destinatario_nombre: str = "Coordinadora de Control Escolar",
+    acta=None, lema_ciclo: str = "",
+) -> BytesIO:
+    contexto = {
+        "oficio_numero": siguiente_folio_formateado(session, "oficio_asentamiento_creditos", "oficio"),
+        "destinatario_nombre": destinatario_nombre,
+        "creditos": creditos,
+        "materia_nombre": materia_nombre,
+        "materia_clave": materia_clave,
+        "ciclo": ciclo,
+        "alumno_es_mujer": None,  # se deja "el/la" si no se sabe; el formulario puede fijarlo luego
+        "alumno_nombre": formatear_nombre(alumno.nombre),
+        "alumno_codigo": alumno.codigo,
+        "acta_referencia": _acta_referencia(acta),
+        "lema_ciclo": lema_ciclo,
+        "fecha_larga": fecha_larga(),
+        "coordinador_nombre": coordinador_nombre,
+    }
+    return _render("oficio_asentamiento_creditos.docx", contexto)
+
+
+def generar_oficio_permiso_municipio(
+    *, session: Session, destinatario_nombre: str, destinatario_cargo: str, municipio: str,
+    cuerpo_solicitud: str, coordinador_nombre: str, cuerpo_parrafo2: str = "", lema_ciclo: str = "",
+) -> BytesIO:
+    """Carta de solicitud de datos/permiso de exploración a una autoridad
+    municipal — el cuerpo es texto libre porque cada solicitud describe un
+    proyecto de investigación distinto (no se fuerza a variables fijas que
+    no reflejarían el caso real)."""
+    contexto = {
+        "oficio_numero": siguiente_folio_formateado(session, "oficio_permiso_municipio", "oficio"),
+        "destinatario_nombre": destinatario_nombre,
+        "destinatario_cargo": destinatario_cargo,
+        "municipio": municipio,
+        "cuerpo_solicitud": cuerpo_solicitud,
+        "cuerpo_parrafo2": cuerpo_parrafo2,
+        "lema_ciclo": lema_ciclo,
+        "fecha_larga": fecha_larga(),
+        "coordinador_nombre": coordinador_nombre,
+    }
+    return _render("oficio_permiso_municipio.docx", contexto)
+
+
+# ----------------------------------------------------------------------- Acta
+
+def generar_acta(*, session: Session, acta, coordinador_nombre: str, lema_ciclo: str = "") -> BytesIO:
     """`acta` es un objeto app.models.Acta con `.puntos` (lista de
     PuntoActa, ya ordenada). No genera tablas dinámicas dentro de un punto
     (ej. listas de comité tutorial) — eso va como texto libre dentro del
