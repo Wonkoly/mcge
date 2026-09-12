@@ -8,14 +8,12 @@ el tiempo, y el lema institucional cambia cada año)."""
 
 from datetime import date
 from io import BytesIO
-from pathlib import Path
 
 from docxtpl import DocxTemplate
 
-TEMPLATES_DIR = Path(__file__).parent / "templates_docx"
+from app.utils.rutas import directorio_recursos
 
-# Precarga de formularios — editable en cada generación, no es un valor fijo.
-COORDINADOR_DEFAULT = "Dr. Héctor Javier Rendón Contreras"
+TEMPLATES_DIR = directorio_recursos() / "app" / "documents" / "templates_docx"
 
 MESES = [
     "enero", "febrero", "marzo", "abril", "mayo", "junio",

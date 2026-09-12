@@ -8,7 +8,7 @@ from app.repositories.profesor_repository import listar_profesores
 from app.services.alumno_service import CodigoDuplicadoError, actualizar_alumno, crear_alumno
 from app.services.comite_service import asignar_comite_tutorial
 from app.services.direccion_service import asignar_direccion
-from app.utils.fechas import ciclo_actual
+from app.services.configuracion_service import ciclo_escolar_vigente
 from app.web.db import get_session
 
 bp = Blueprint("alumnos", __name__, url_prefix="/alumnos")
@@ -83,7 +83,7 @@ def detalle(alumno_id):
         codirector=codirector,
         historial_direccion=historial_direcciones(session, alumno_id),
         profesores=listar_profesores(session),
-        ciclo_sugerido=ciclo_actual(),
+        ciclo_sugerido=ciclo_escolar_vigente(session),
     )
 
 
@@ -108,7 +108,7 @@ def asignar_direccion_route(alumno_id):
 def asignar_comite_route(alumno_id):
     session = get_session()
     profesor_ids = [int(pid) for pid in request.form.getlist("profesor_ids")]
-    ciclo = request.form.get("ciclo") or ciclo_actual()
+    ciclo = request.form.get("ciclo") or ciclo_escolar_vigente(session)
     if not profesor_ids:
         flash("Selecciona al menos un profesor para el comité tutorial.", "error")
         return redirect(url_for("alumnos.detalle", alumno_id=alumno_id))

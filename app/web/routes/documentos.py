@@ -3,13 +3,13 @@ import re
 from flask import Blueprint, flash, redirect, request, send_file, url_for
 
 from app.documents.generador import (
-    COORDINADOR_DEFAULT,
     generar_acta,
     generar_constancia_direccion,
     generar_oficio_direccion,
 )
 from app.models import Direccion
 from app.repositories.acta_repository import obtener_acta
+from app.services.configuracion_service import obtener as obtener_config
 from app.web.db import get_session
 
 bp = Blueprint("documentos", __name__, url_prefix="/documentos")
@@ -29,7 +29,7 @@ def documento_direccion(direccion_id):
         return redirect(url_for("alumnos.listar"))
 
     tipo = request.form.get("tipo")
-    coordinador_nombre = request.form.get("coordinador_nombre") or COORDINADOR_DEFAULT
+    coordinador_nombre = request.form.get("coordinador_nombre") or obtener_config(session, "coordinador_nombre")
     lema_ciclo = request.form.get("lema_ciclo") or ""
     tratamiento_manual = request.form.get("profesor_tratamiento_nombre") or None
 
@@ -66,7 +66,7 @@ def documento_acta(acta_id):
         flash("Acta no encontrada.", "error")
         return redirect(url_for("actas.listar"))
 
-    coordinador_nombre = request.args.get("coordinador_nombre") or COORDINADOR_DEFAULT
+    coordinador_nombre = request.args.get("coordinador_nombre") or obtener_config(session, "coordinador_nombre")
     lema_ciclo = request.args.get("lema_ciclo") or ""
 
     buffer = generar_acta(acta=acta, coordinador_nombre=coordinador_nombre, lema_ciclo=lema_ciclo)

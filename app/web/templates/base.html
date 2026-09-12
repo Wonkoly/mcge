@@ -4,7 +4,11 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>{% block titulo %}MCG{% endblock %} — Maestría en Geofísica</title>
+  {# style.css: plantillas viejas sin migrar todavía. app.css (Tailwind): plantillas nuevas/migradas.
+     Conviven mientras dura la migración módulo por módulo — no es un rediseño de un solo golpe. #}
   <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/app.css') }}">
+  <script src="{{ url_for('static', filename='js/htmx.min.js') }}"></script>
 </head>
 <body>
   <div class="app">
@@ -19,6 +23,7 @@
         <a href="{{ url_for('aspirantes.listar') }}" class="{{ 'activo' if request.blueprint == 'aspirantes' else '' }}">Aspirantes</a>
         <a href="{{ url_for('profesores.listar') }}" class="{{ 'activo' if request.blueprint == 'profesores' else '' }}">Profesores</a>
         <a href="{{ url_for('actas.listar') }}" class="{{ 'activo' if request.blueprint == 'actas' else '' }}">Actas</a>
+        <a href="{{ url_for('configuracion.index') }}" class="{{ 'activo' if request.blueprint == 'configuracion' else '' }}">Configuración</a>
       </nav>
       <div class="sidebar-pie">Maestría en Ciencias en Geofísica<br>CUC · Universidad de Guadalajara</div>
     </aside>

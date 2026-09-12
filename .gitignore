@@ -3,9 +3,17 @@ __pycache__/
 *.pyc
 
 # Datos reales de alumnos/profesores (personal, sensible) — no se versiona.
-data/*.db
+data/*.db*
 backups/
 Docs/
 
+# Binario standalone de Tailwind (descargar con scripts/build_css.sh o desde
+# github.com/tailwindlabs/tailwindcss/releases) — no se versiona, ~40MB.
+.tools/
+
 # Artefactos de prueba
 scratch_*.png
+
+# Empaquetado PyInstaller (se genera con `pyinstaller mcg.spec`, no se versiona)
+build/
+dist/

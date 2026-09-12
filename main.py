@@ -7,8 +7,8 @@ from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 
-from app.database.session import DB_PATH, init_db
-from app.utils.backup import respaldar_si_hace_falta
+from app.database.session import DB_PATH, SessionLocal, init_db
+from app.utils.backup import iniciar_respaldos_periodicos, limpiar_respaldos_viejos, respaldar_si_hace_falta
 from app.web import create_app
 
 PORT = 8420
@@ -38,6 +38,16 @@ def main():
         init_db()
     else:
         respaldar_si_hace_falta()
+        limpiar_respaldos_viejos()
+
+    from app.services.configuracion_service import obtener as obtener_config
+
+    session = SessionLocal()
+    try:
+        intervalo = float(obtener_config(session, "backup_intervalo_horas"))
+    finally:
+        session.close()
+    iniciar_respaldos_periodicos(intervalo)
 
     app = create_app()
 

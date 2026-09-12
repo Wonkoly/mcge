@@ -1,5 +1,6 @@
 from app.models.base import Base
 from app.models.catalogos import StatusAlumno, Lies
+from app.models.configuracion import Configuracion
 from app.models.profesor import Profesor, ProfesorAlias
 from app.models.alumno import Alumno
 from app.models.acta import Acta, PuntoActa
@@ -14,6 +15,7 @@ __all__ = [
     "Base",
     "StatusAlumno",
     "Lies",
+    "Configuracion",
     "Profesor",
     "ProfesorAlias",
     "Alumno",
