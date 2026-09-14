@@ -6,7 +6,7 @@ from datetime import datetime, timedelta
 from pathlib import Path
 
 from app.database.session import DB_PATH
-from app.utils.rutas import directorio_datos
+from app.utils.rutas import directorio_datos, directorio_plantillas_personalizadas
 
 BACKUPS_DIR_LOCAL = directorio_datos() / "backups"
 
@@ -38,13 +38,31 @@ def crear_respaldo() -> Path | None:
     if not DB_PATH.exists():
         return None
 
-    destino = carpeta_respaldos() / f"{PREFIJO}{datetime.now():%Y-%m-%d_%H%M%S}.db"
+    sello = datetime.now().strftime("%Y-%m-%d_%H%M%S")
+    destino = carpeta_respaldos() / f"{PREFIJO}{sello}.db"
     con = sqlite3.connect(str(DB_PATH))
     try:
         con.execute("VACUUM INTO ?", [str(destino)])
     finally:
         con.close()
+
+    _respaldar_plantillas(sello)
     return destino
+
+
+def _respaldar_plantillas(sello: str) -> None:
+    """Copia los moldes/plantillas subidos desde el taller (Documentos) —
+    no viven en la base de datos, así que VACUUM INTO no los cubre. Se
+    salta si todavía no se ha subido nada (nada que respaldar)."""
+    origen = directorio_plantillas_personalizadas()
+    archivos = list(origen.glob("*.docx"))
+    if not archivos:
+        return
+
+    destino = carpeta_respaldos() / f"{PREFIJO}{sello}_plantillas"
+    destino.mkdir(exist_ok=True)
+    for archivo in archivos:
+        shutil.copy2(archivo, destino / archivo.name)
 
 
 def listar_respaldos() -> list[Path]:
@@ -59,6 +77,9 @@ def limpiar_respaldos_viejos(dias_retencion: int = 30) -> int:
         if datetime.fromtimestamp(archivo.stat().st_mtime) < limite:
             archivo.unlink()
             eliminados += 1
+            carpeta_plantillas = archivo.parent / f"{archivo.stem}_plantillas"
+            if carpeta_plantillas.is_dir():
+                shutil.rmtree(carpeta_plantillas)
     return eliminados
 
 
@@ -84,6 +105,14 @@ def restaurar_respaldo(nombre_archivo: str) -> None:
             candidato.unlink()
 
     shutil.copy2(origen, DB_PATH)
+
+    carpeta_plantillas_respaldo = origen.parent / f"{origen.stem}_plantillas"
+    if carpeta_plantillas_respaldo.is_dir():
+        destino_plantillas = directorio_plantillas_personalizadas()
+        for archivo in destino_plantillas.glob("*.docx"):
+            archivo.unlink()
+        for archivo in carpeta_plantillas_respaldo.glob("*.docx"):
+            shutil.copy2(archivo, destino_plantillas / archivo.name)
 
 
 def iniciar_respaldos_periodicos(intervalo_horas: float = 4) -> None:

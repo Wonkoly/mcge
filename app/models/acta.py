@@ -70,9 +70,17 @@ class PuntoActa(Base):
     direccion_id: Mapped[Optional[int]] = mapped_column(ForeignKey("direccion.id"))
     comite_tutorial_id: Mapped[Optional[int]] = mapped_column(ForeignKey("comite_tutorial.id"))
 
+    # tipo == "personalizado" (taller de plantillas): qué tipo de documento
+    # es, y los valores de las variables que no vienen de Alumno/Profesor
+    # (ej. destinatario_nombre/cargo) como JSON — alumno_id/profesor_id de
+    # arriba se reutilizan tal cual si el cuerpo del documento los usa.
+    tipo_documento_id: Mapped[Optional[int]] = mapped_column(ForeignKey("tipo_documento_personalizado.id"))
+    datos_json: Mapped[Optional[str]] = mapped_column(String(4000))
+
     acta: Mapped["Acta"] = relationship(back_populates="puntos")
     alumno = relationship("Alumno")
     profesor = relationship("Profesor")
+    tipo_documento = relationship("TipoDocumentoPersonalizado")
     miembros: Mapped[list["PuntoActaMiembro"]] = relationship(cascade="all, delete-orphan")
 
 

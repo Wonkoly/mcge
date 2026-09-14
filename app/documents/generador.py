@@ -18,10 +18,12 @@ from io import BytesIO
 from docxtpl import DocxTemplate
 from sqlalchemy.orm import Session
 
+import json
+
 from app.models.profesor import PREFIJO_POR_TRATAMIENTO
 
 from app.services.folio_service import siguiente_folio_formateado
-from app.utils.rutas import directorio_recursos
+from app.utils.rutas import directorio_plantillas_personalizadas, directorio_recursos
 
 TEMPLATES_DIR = directorio_recursos() / "app" / "documents" / "templates_docx"
 
@@ -370,3 +372,50 @@ def generar_acta(*, session: Session, acta, coordinador_nombre: str, lema_ciclo:
         "coordinador_nombre": coordinador_nombre,
     }
     return _render("acta.docx", contexto)
+
+
+# ------------------------------------------ Tipos de documento personalizados
+
+def generar_documento_personalizado(
+    *, session: Session, tipo_documento, punto, coordinador_nombre: str, lema_ciclo: str = ""
+) -> BytesIO:
+    """`tipo_documento` es un TipoDocumentoPersonalizado ya confirmado
+    (con `.plantilla_archivo`), `punto` el PuntoActa que lo usa —
+    `punto.datos_json` trae los campos libres capturados (ej.
+    destinatario_nombre) y `punto.alumno`/`punto.profesor` los registros
+    reales si el cuerpo los usa. La plantilla vive en la carpeta
+    escribible (subida desde el taller, no empaquetada) — se lee con la
+    misma DocxTemplate/_render de siempre, solo cambia de dónde sale la
+    ruta."""
+    contexto = json.loads(punto.datos_json) if punto.datos_json else {}
+
+    if punto.alumno is not None:
+        a = punto.alumno
+        contexto.update(
+            {
+                "alumno_nombre": formatear_nombre(a.nombre),
+                "alumno_codigo": a.codigo,
+                "alumno_tesis_titulo": a.tesis_titulo or "",
+                "alumno_ciclo_ingreso": a.ciclo_ingreso or "",
+            }
+        )
+    if punto.profesor is not None:
+        contexto["profesor_nombre"] = _nombre_con_tratamiento(punto.profesor)
+
+    contexto.update(
+        {
+            "numero_documento": siguiente_folio_formateado(
+                session, f"personalizado_{tipo_documento.clave}", tipo_documento.categoria
+            ),
+            "fecha_larga": fecha_larga(),
+            "coordinador_nombre": coordinador_nombre,
+            "lema_ciclo": lema_ciclo,
+        }
+    )
+
+    tpl = DocxTemplate(str(directorio_plantillas_personalizadas() / tipo_documento.plantilla_archivo))
+    tpl.render(contexto)
+    buffer = BytesIO()
+    tpl.save(buffer)
+    buffer.seek(0)
+    return buffer

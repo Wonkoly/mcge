@@ -1,0 +1,114 @@
+{% extends "base.html" %}
+{% block titulo %}{{ tipo.etiqueta }}{% endblock %}
+{% block contenido %}
+  <p><a href="{{ url_for('documentos.index') }}">&larr; Volver a Documentos</a></p>
+
+  <div class="cabecera-pagina">
+    <div>
+      <h1>{{ tipo.etiqueta }}</h1>
+      <p class="subtitulo">
+        {{ "Oficio" if tipo.categoria == "oficio" else "Constancia" }} ·
+        <span class="badge {{ 'badge-activo' if tipo.estado == 'confirmado' else '' }}">
+          {{ "Confirmado — ya aparece en Actas" if tipo.estado == "confirmado" else "Borrador" }}
+        </span>
+      </p>
+    </div>
+  </div>
+
+  {% if not molde or not molde.archivo %}
+    <div class="mensaje mensaje-error" style="margin-bottom:20px;">
+      Todavía no hay un molde base subido para "{{ tipo.categoria }}". Súbelo primero en
+      <a href="{{ url_for('documentos.index') }}">Documentos</a> — sin eso no se puede generar ni
+      la vista previa ni la plantilla definitiva.
+    </div>
+  {% endif %}
+
+  <div class="editor-dos-columnas">
+    <div>
+      <form method="post">
+        <div class="campo">
+          <label>Cuerpo del documento</label>
+          <p class="subtitulo" style="margin:0 0 8px;">
+            Cada renglón es un párrafo. Escribe libremente e inserta variables desde el panel de
+            la derecha — el membrete (logos, pie de página) lo pone el molde base, no se edita
+            aquí.
+          </p>
+          <textarea id="cuerpo-texto" name="cuerpo_texto" rows="22" style="font-family: 'Consolas', monospace; font-size:13px;">{{ tipo.cuerpo_texto or "" }}</textarea>
+        </div>
+        <div class="acciones-form">
+          <button class="btn" type="submit">Guardar cuerpo</button>
+        </div>
+      </form>
+
+      <div class="panel" style="margin-top:20px;">
+        <h2>Generar y confirmar</h2>
+        <p class="subtitulo">
+          "Generar vista previa" descarga el .docx con el membrete del molde + tu cuerpo (con las
+          etiquetas {{ '{{ }}' }} tal cual, sin datos de ejemplo) para revisar que se vea bien.
+          "Confirmar" lo deja como la plantilla definitiva — a partir de ahí ya aparece como
+          opción al agregar un punto en Actas. Puedes editar el cuerpo y volver a confirmar las
+          veces que haga falta.
+        </p>
+        <div class="acciones-form">
+          <a class="btn btn-secundario" href="{{ url_for('documentos.tipos_generar', tipo_id=tipo.id) }}">Generar vista previa</a>
+          <form method="post" action="{{ url_for('documentos.tipos_confirmar', tipo_id=tipo.id) }}">
+            <button class="btn" type="submit">Confirmar como definitiva</button>
+          </form>
+        </div>
+      </div>
+
+      {% if libres %}
+        <div class="panel" style="margin-top:20px;">
+          <h2>Campos libres detectados</h2>
+          <p class="subtitulo">No son de alumno/profesor ni generales — se van a pedir como texto libre cada vez que se use este tipo desde una Acta.</p>
+          <ul class="lista-simple">
+            {% for clave in libres %}<li><code>{{ clave }}</code></li>{% endfor %}
+          </ul>
+        </div>
+      {% endif %}
+    </div>
+
+    <div class="panel-variables">
+      <h2 style="font-size:14px;">Insertar dato</h2>
+      <div class="grupo-variables">
+        <h3>Alumno</h3>
+        {% for clave, etiqueta in variables_alumno.items() %}
+          <button type="button" class="chip-variable" data-clave="{{ clave }}">{{ etiqueta }}</button>
+        {% endfor %}
+      </div>
+      <div class="grupo-variables">
+        <h3>Profesor</h3>
+        {% for clave, etiqueta in variables_profesor.items() %}
+          <button type="button" class="chip-variable" data-clave="{{ clave }}">{{ etiqueta }}</button>
+        {% endfor %}
+      </div>
+      <div class="grupo-variables">
+        <h3>General</h3>
+        {% for clave, etiqueta in variables_generales.items() %}
+          <button type="button" class="chip-variable" data-clave="{{ clave }}">{{ etiqueta }}</button>
+        {% endfor %}
+      </div>
+      <p class="subtitulo" style="margin-top:12px;">
+        ¿Necesitas otro dato (ej. a quién va dirigido)? Solo escríbelo tú mismo como
+        <code>{{ '{{ destinatario_nombre }}' }}</code> directamente en el cuerpo — se detecta solo y
+        se pide como texto libre al generar el documento.
+      </p>
+    </div>
+  </div>
+
+  <script>
+    var LLAVE_ABRE = "{{ '{{' }}";
+    var LLAVE_CIERRA = "{{ '}}' }}";
+
+    document.querySelectorAll(".chip-variable").forEach(function (boton) {
+      boton.addEventListener("click", function () {
+        var textarea = document.getElementById("cuerpo-texto");
+        var texto = LLAVE_ABRE + " " + boton.dataset.clave + " " + LLAVE_CIERRA;
+        var inicio = textarea.selectionStart;
+        var fin = textarea.selectionEnd;
+        textarea.setRangeText(texto, inicio, fin, "end");
+        textarea.focus();
+      });
+    });
+  </script>
+{% endblock %}

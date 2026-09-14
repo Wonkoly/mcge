@@ -8,6 +8,7 @@ from app.documents.generador import (
     generar_constancia_evaluador_aspirantes,
     generar_constancia_jurado,
     generar_constancia_lector,
+    generar_documento_personalizado,
     generar_oficio_asentamiento_creditos,
     generar_oficio_comite_tutorial_alumno,
     generar_oficio_comite_tutorial_docente,
@@ -15,10 +16,22 @@ from app.documents.generador import (
     generar_oficio_invitacion_jurado,
     generar_oficio_permiso_municipio,
 )
-from app.models import Alumno, ComiteTutorial, Direccion, Lector, Profesor, Sinodal
+from app.documents.variables_disponibles import VARIABLES_ALUMNO, VARIABLES_GENERALES, VARIABLES_PROFESOR
+from app.models import Alumno, ComiteTutorial, Direccion, Lector, Profesor, PuntoActa, Sinodal
 from app.repositories.acta_repository import obtener_acta
 from app.repositories.profesor_repository import listar_profesores
+from app.repositories.tipo_documento_repository import listar_moldes, listar_tipos, obtener_tipo
 from app.services.configuracion_service import obtener as obtener_config
+from app.services.tipo_documento_service import (
+    CATEGORIAS_VALIDAS,
+    MoldeFaltanteError,
+    actualizar_cuerpo,
+    compilar_plantilla,
+    confirmar_plantilla,
+    crear_tipo,
+    guardar_molde_base,
+    variables_libres,
+)
 from app.web.db import get_session
 
 bp = Blueprint("documentos", __name__, url_prefix="/documentos")
@@ -46,7 +59,120 @@ def _coordinador_y_lema(session):
 
 @bp.route("/")
 def index():
-    return render_template("documentos/index.html")
+    session = get_session()
+    tipos = listar_tipos(session)
+    return render_template(
+        "documentos/index.html",
+        moldes=listar_moldes(session),
+        tipos_oficio=[t for t in tipos if t.categoria == "oficio"],
+        tipos_constancia=[t for t in tipos if t.categoria == "constancia"],
+    )
+
+
+@bp.route("/moldes/<categoria>", methods=["POST"])
+def subir_molde(categoria):
+    session = get_session()
+    if categoria not in CATEGORIAS_VALIDAS:
+        flash("Categoría inválida.", "error")
+        return redirect(url_for("documentos.index"))
+    try:
+        guardar_molde_base(session, categoria, request.files.get("archivo"))
+        session.commit()
+        flash(f"Molde base de {categoria} actualizado.", "exito")
+    except ValueError as exc:
+        flash(str(exc), "error")
+    return redirect(url_for("documentos.index"))
+
+
+@bp.route("/tipos/nuevo", methods=["GET", "POST"])
+def tipos_nuevo():
+    session = get_session()
+    if request.method == "POST":
+        try:
+            tipo = crear_tipo(
+                session,
+                etiqueta=request.form.get("etiqueta", ""),
+                categoria=request.form.get("categoria", ""),
+                descripcion=request.form.get("descripcion", ""),
+            )
+            session.commit()
+            return redirect(url_for("documentos.tipos_detalle", tipo_id=tipo.id))
+        except ValueError as exc:
+            flash(str(exc), "error")
+    categoria_sugerida = request.args.get("categoria", "oficio")
+    return render_template("documentos/tipos_nuevo.html", categoria_sugerida=categoria_sugerida)
+
+
+@bp.route("/tipos/<int:tipo_id>", methods=["GET", "POST"])
+def tipos_detalle(tipo_id):
+    session = get_session()
+    tipo = obtener_tipo(session, tipo_id)
+    if tipo is None:
+        flash("Tipo de documento no encontrado.", "error")
+        return redirect(url_for("documentos.index"))
+
+    if request.method == "POST":
+        actualizar_cuerpo(session, tipo, request.form.get("cuerpo_texto", ""))
+        session.commit()
+        flash("Cuerpo guardado.", "exito")
+        return redirect(url_for("documentos.tipos_detalle", tipo_id=tipo.id))
+
+    return render_template(
+        "documentos/tipos_detalle.html",
+        tipo=tipo,
+        molde=listar_moldes(session).get(tipo.categoria),
+        variables_alumno=VARIABLES_ALUMNO,
+        variables_profesor=VARIABLES_PROFESOR,
+        variables_generales=VARIABLES_GENERALES,
+        libres=variables_libres(tipo.cuerpo_texto or ""),
+    )
+
+
+@bp.route("/tipos/<int:tipo_id>/generar", methods=["GET"])
+def tipos_generar(tipo_id):
+    session = get_session()
+    tipo = obtener_tipo(session, tipo_id)
+    if tipo is None:
+        flash("Tipo de documento no encontrado.", "error")
+        return redirect(url_for("documentos.index"))
+    try:
+        buffer = compilar_plantilla(session, tipo)
+    except MoldeFaltanteError as exc:
+        flash(str(exc), "error")
+        return redirect(url_for("documentos.tipos_detalle", tipo_id=tipo.id))
+    return _descargar(buffer, _nombre_archivo(f"Vista previa {tipo.etiqueta}"))
+
+
+@bp.route("/tipos/<int:tipo_id>/confirmar", methods=["POST"])
+def tipos_confirmar(tipo_id):
+    session = get_session()
+    tipo = obtener_tipo(session, tipo_id)
+    if tipo is None:
+        flash("Tipo de documento no encontrado.", "error")
+        return redirect(url_for("documentos.index"))
+    try:
+        confirmar_plantilla(session, tipo)
+        session.commit()
+        flash(f'"{tipo.etiqueta}" confirmado — ya aparece como opción en Actas.', "exito")
+    except MoldeFaltanteError as exc:
+        flash(str(exc), "error")
+    return redirect(url_for("documentos.tipos_detalle", tipo_id=tipo.id))
+
+
+@bp.route("/personalizado/<int:punto_id>", methods=["POST"])
+def documento_personalizado(punto_id):
+    session = get_session()
+    punto = session.get(PuntoActa, punto_id)
+    if punto is None or punto.tipo_documento is None:
+        flash("Punto no encontrado.", "error")
+        return redirect(url_for("actas.listar"))
+
+    coordinador_nombre, lema_ciclo = _coordinador_y_lema(session)
+    buffer = generar_documento_personalizado(
+        session=session, tipo_documento=punto.tipo_documento, punto=punto,
+        coordinador_nombre=coordinador_nombre, lema_ciclo=lema_ciclo,
+    )
+    return _descargar(buffer, _nombre_archivo(f"{punto.tipo_documento.etiqueta} {punto.titulo}"))
 
 
 @bp.route("/direccion/<int:direccion_id>", methods=["POST"])

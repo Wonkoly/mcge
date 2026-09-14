@@ -33,3 +33,12 @@ def directorio_datos() -> Path:
     if congelado():
         return Path(sys.executable).resolve().parent  # junto al .exe, no dentro del paquete
     return RAIZ_PROYECTO
+
+
+def directorio_plantillas_personalizadas() -> Path:
+    """Moldes base y plantillas de tipos de documento personalizados
+    subidos desde la app (Documentos → taller de plantillas) — escribible,
+    junto a data/ y backups/, para sobrevivir actualizaciones del .exe."""
+    ruta = directorio_datos() / "plantillas_personalizadas"
+    ruta.mkdir(parents=True, exist_ok=True)
+    return ruta

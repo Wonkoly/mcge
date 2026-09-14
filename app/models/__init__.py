@@ -4,6 +4,8 @@ from app.models.configuracion import Configuracion
 from app.models.folio import FolioSecuencia
 from app.models.profesor import Profesor, ProfesorAlias
 from app.models.alumno import Alumno
+from app.models.plantilla_base import PlantillaBase
+from app.models.tipo_documento import TipoDocumentoPersonalizado
 from app.models.acta import Acta, PuntoActa, PuntoActaMiembro
 from app.models.direccion import Direccion
 from app.models.comite import ComiteTutorial, ComiteMiembro
@@ -21,6 +23,8 @@ __all__ = [
     "Profesor",
     "ProfesorAlias",
     "Alumno",
+    "PlantillaBase",
+    "TipoDocumentoPersonalizado",
     "Acta",
     "PuntoActa",
     "PuntoActaMiembro",

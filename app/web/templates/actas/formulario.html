@@ -65,11 +65,49 @@
   </div>
 {% endmacro %}
 
-{% macro bloque_punto(indice, punto=None, tipo=None) %}
+{% macro campos_punto_personalizado(indice, tipo_documento, punto=None) %}
+  <input type="hidden" name="punto_tipo_documento_id_{{ indice }}" value="{{ tipo_documento.id }}">
+  <div class="campo">
+    <label>Título del punto</label>
+    <input type="text" name="punto_titulo_{{ indice }}" value="{{ punto.titulo if punto else tipo_documento.etiqueta }}">
+  </div>
+  <div class="campo">
+    <label>Resolutivo (opcional)</label>
+    <textarea name="punto_resolutivo_{{ indice }}" rows="2">{{ punto.resolutivo if punto else '' }}</textarea>
+  </div>
+  {% if tipo_documento.necesita_alumno %}
+    <div class="campo campo-autocompletar campo-autocompletar-alumno">
+      <label>Alumno</label>
+      <input type="text" class="autocompletar-texto" placeholder="Escribe el nombre del alumno..." autocomplete="off"
+             value="{{ punto.alumno.nombre if punto and punto.alumno else '' }}">
+      <input type="hidden" name="punto_alumno_id_{{ indice }}" class="autocompletar-valor" value="{{ punto.alumno_id if punto else '' }}">
+      <div class="autocompletar-sugerencias"></div>
+    </div>
+  {% endif %}
+  {% if tipo_documento.necesita_profesor %}
+    <div class="campo campo-autocompletar campo-autocompletar-profesor" data-fuente="profesores">
+      <label>Profesor</label>
+      <input type="text" class="autocompletar-texto" placeholder="Escribe el nombre del profesor..." autocomplete="off"
+             value="{{ punto.profesor.nombre if punto and punto.profesor else '' }}">
+      <input type="hidden" name="punto_profesor_id_{{ indice }}" class="autocompletar-valor" value="{{ punto.profesor_id if punto else '' }}">
+      <div class="autocompletar-sugerencias"></div>
+    </div>
+  {% endif %}
+  {% for clave in tipo_documento.campos_libres %}
+    <div class="campo">
+      <label>{{ clave.replace('_', ' ') | capitalize }}</label>
+      <input type="text" name="punto_campo_{{ indice }}__{{ clave }}" value="{{ punto.datos_dict.get(clave, '') if punto else '' }}">
+    </div>
+  {% endfor %}
+{% endmacro %}
+
+{% macro bloque_punto(indice, punto=None, tipo=None, tipo_documento=None) %}
   {% set tipo = punto.tipo if punto else tipo %}
+  {% set tipo_documento = punto.tipo_documento if punto and punto.tipo_documento else tipo_documento %}
+  {% set etiqueta = tipo_documento.etiqueta if tipo_documento else tipos_punto_info[tipo].etiqueta %}
   <div class="punto-resumen">
     <div class="punto-resumen-texto">
-      <span class="punto-resumen-tipo">{{ tipos_punto_info[tipo].etiqueta }}</span>
+      <span class="punto-resumen-tipo">{{ etiqueta }}</span>
       <span class="punto-resumen-detalle"></span>
     </div>
     <div class="punto-resumen-acciones">
@@ -77,10 +115,11 @@
       <button type="button" class="btn btn-pequeno btn-secundario btn-quitar-punto">Quitar</button>
     </div>
     <div class="punto-campos-slot" style="display:none;">
-      <div class="punto-campos" data-tipo="{{ tipo }}">
+      <div class="punto-campos" data-tipo="{{ tipo }}" data-etiqueta="{{ etiqueta }}">
         <input type="hidden" name="punto_tipo_{{ indice }}" value="{{ tipo }}">
         {% if tipo == "direccion" %}{{ campos_punto_direccion(indice, punto) }}
         {% elif tipo == "comite_tutorial" %}{{ campos_punto_comite(indice, punto) }}
+        {% elif tipo == "personalizado" %}{{ campos_punto_personalizado(indice, tipo_documento, punto) }}
         {% else %}{{ campos_punto_otro(indice, punto) }}
         {% endif %}
       </div>
@@ -164,6 +203,9 @@
     {% for clave, info in tipos_punto_info.items() %}
       <template id="plantilla-punto-{{ clave }}">{{ bloque_punto("__IDX__", tipo=clave) }}</template>
     {% endfor %}
+    {% for t in tipos_personalizados %}
+      <template id="plantilla-punto-personalizado-{{ t.id }}">{{ bloque_punto("__IDX__", tipo="personalizado", tipo_documento=t) }}</template>
+    {% endfor %}
 
     <dialog id="modal-elegir-tipo" class="modal-mcg">
       <div class="modal-mcg-cabecera">
@@ -178,6 +220,16 @@
               <div class="tarjeta-tipo-desc">{{ info.descripcion }}</div>
             </button>
           {% endfor %}
+          {% for t in tipos_personalizados %}
+            <button type="button" class="tarjeta-tipo-punto" data-tipo="personalizado" data-tipo-documento-id="{{ t.id }}">
+              <div class="tarjeta-tipo-titulo">{{ t.etiqueta }}</div>
+              <div class="tarjeta-tipo-desc">{{ t.descripcion or "" }}</div>
+            </button>
+          {% endfor %}
+          <a href="{{ url_for('documentos.tipos_nuevo') }}" target="_blank" class="tarjeta-tipo-punto" style="text-decoration:none; border-style:dashed; display:block;">
+            <div class="tarjeta-tipo-titulo">+ Agregar tipo de documento nuevo</div>
+            <div class="tarjeta-tipo-desc">Abre el taller de plantillas en una pestaña nueva. Cuando termines de redactarlo y confirmarlo, regresa aquí — ya aparecerá como opción.</div>
+          </a>
         </div>
       </div>
     </dialog>
@@ -198,7 +250,6 @@
   <script id="datos-profesores" type="application/json">{{ profesores_json | tojson }}</script>
 
   <script>
-    var TIPOS_PUNTO_ETIQUETAS = {{ tipos_punto | tojson }};
     var DATOS_ALUMNOS = JSON.parse(document.getElementById("datos-alumnos").textContent);
     var DATOS_PROFESORES = JSON.parse(document.getElementById("datos-profesores").textContent);
     var siguienteIndice = {{ (acta.puntos|length) if acta and acta.puntos else 0 }};
@@ -283,7 +334,7 @@
     function abrirEdicionPunto(bloque) {
       bloqueEnEdicion = bloque;
       var campos = bloque.querySelector(".punto-campos");
-      document.getElementById("modal-punto-titulo").textContent = TIPOS_PUNTO_ETIQUETAS[campos.dataset.tipo] || "Editar punto";
+      document.getElementById("modal-punto-titulo").textContent = campos.dataset.etiqueta || "Editar punto";
       document.getElementById("modal-punto-cuerpo").appendChild(campos);
       document.getElementById("modal-punto").showModal();
     }
@@ -308,12 +359,15 @@
       document.getElementById("modal-elegir-tipo").showModal();
     });
 
-    document.querySelectorAll(".tarjeta-tipo-punto").forEach(function (tarjeta) {
+    document.querySelectorAll("button.tarjeta-tipo-punto").forEach(function (tarjeta) {
       tarjeta.addEventListener("click", function () {
         var tipo = tarjeta.dataset.tipo;
+        var idPlantilla = tipo === "personalizado"
+          ? "plantilla-punto-personalizado-" + tarjeta.dataset.tipoDocumentoId
+          : "plantilla-punto-" + tipo;
         document.getElementById("modal-elegir-tipo").close();
         var indice = siguienteIndice++;
-        var html = document.getElementById("plantilla-punto-" + tipo).innerHTML.split("__IDX__").join(indice);
+        var html = document.getElementById(idPlantilla).innerHTML.split("__IDX__").join(indice);
         var envoltura = document.createElement("div");
         envoltura.innerHTML = html;
         var bloque = envoltura.firstElementChild;

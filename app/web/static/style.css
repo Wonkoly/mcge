@@ -318,6 +318,33 @@ dialog.modal-mcg::backdrop { background: rgba(15,23,42,0.45); }
 .tarjeta-tipo-titulo { font-weight: 600; margin-bottom: 4px; }
 .tarjeta-tipo-desc { font-size: 13px; color: var(--texto-suave); }
 
+/* --- Taller de plantillas (Documentos) --- */
+.editor-dos-columnas { display: grid; grid-template-columns: 1fr 300px; gap: 20px; align-items: start; }
+.editor-dos-columnas textarea { width: 100%; }
+.panel-variables {
+  background: var(--blanco); border: 1px solid var(--gris-borde); border-radius: var(--radio);
+  padding: 16px; position: sticky; top: 20px;
+}
+.grupo-variables { margin-bottom: 16px; }
+.grupo-variables h3 { font-size: 12px; text-transform: uppercase; letter-spacing: 0.03em; color: var(--texto-suave); margin: 0 0 8px; }
+.chip-variable {
+  display: block; width: 100%; text-align: left; padding: 7px 10px; margin-bottom: 6px;
+  border: 1px solid var(--gris-borde); border-radius: 8px; background: var(--gris-fondo);
+  font-size: 12px; cursor: pointer; font-family: inherit;
+}
+.chip-variable:hover { border-color: var(--azul-acento); background: #eef2ff; }
+
+.tarjetas-tipos-documento { display: flex; flex-direction: column; gap: 8px; margin-bottom: 16px; }
+.tarjeta-tipo-documento {
+  display: flex; justify-content: space-between; align-items: center; padding: 10px 16px;
+  border: 1px solid var(--gris-borde); border-radius: 8px; background: var(--blanco);
+  text-decoration: none; color: inherit;
+}
+.tarjeta-tipo-documento:hover { border-color: var(--azul-acento); }
+
+.moldes-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); gap: 16px; margin-bottom: 20px; }
+.molde-tarjeta { background: var(--blanco); border: 1px solid var(--gris-borde); border-radius: var(--radio); padding: 16px; }
+
 .tabs { display: flex; gap: 4px; border-bottom: 1px solid var(--gris-borde); margin-bottom: 20px; }
 .tab-boton {
   padding: 10px 18px; font-size: 14px; font-weight: 600; color: var(--texto-suave);
