@@ -104,41 +104,7 @@
       {% endif %}
     </div>
 
-    <div class="panel">
-      <h2>Asignar / cambiar comité tutorial</h2>
-      <form method="post" action="{{ url_for('alumnos.asignar_comite_route', alumno_id=alumno.id) }}" class="formulario">
-        <div class="fila-campos">
-          <div class="campo">
-            <label>Ciclo</label>
-            <input type="text" name="ciclo" value="{{ ciclo_sugerido }}">
-          </div>
-          <div class="campo">
-            <label>Acta en la que se aprobó</label>
-            <select name="acta_id">
-              <option value="">— Sin acta (agregar después) —</option>
-              {% for a in actas %}<option value="{{ a.id }}">{{ a.numero }}{% if a.fecha %} — {{ a.fecha }}{% endif %}</option>{% endfor %}
-            </select>
-          </div>
-        </div>
-        <p class="subtitulo" style="margin:-8px 0 12px;">¿No existe el acta todavía? <a href="{{ url_for('actas.nuevo') }}" target="_blank">Créala aquí</a> y vuelve a esta pantalla para seleccionarla.</p>
-        <div class="campo">
-          <label>Miembros (2-3 profesores, sin cargo diferenciado)</label>
-          <input type="text" id="filtro-profesores-comite" placeholder="Buscar profesor por nombre..." style="margin-bottom:8px;">
-          <div class="checklist-profesores" id="lista-profesores-comite">
-            {% set miembros_actuales = comite.miembros | map(attribute="profesor_id") | list if comite else [] %}
-            {% for p in profesores %}
-              <label data-nombre="{{ p.nombre|lower }}">
-                <input type="checkbox" name="profesor_ids" value="{{ p.id }}" {{ "checked" if p.id in miembros_actuales else "" }}>
-                {{ p.nombre }}{{ "" if p.nucleo_academico else " (externo)" }}
-              </label>
-            {% endfor %}
-          </div>
-        </div>
-        <div class="acciones-form">
-          <button class="btn" type="submit">Guardar comité tutorial</button>
-        </div>
-      </form>
-    </div>
+    <p class="subtitulo">Los cambios de comité tutorial se hacen desde Actas, no aquí — esta pantalla es solo de consulta. <a href="{{ url_for('actas.nuevo') }}">+ Nueva acta</a></p>
 
     <div class="panel">
       <h2>Historial</h2>
@@ -206,39 +172,7 @@
       </div>
     {% endif %}
 
-    <div class="panel">
-      <h2>Asignar / cambiar Director o Codirector</h2>
-      <form method="post" action="{{ url_for('alumnos.asignar_direccion_route', alumno_id=alumno.id) }}" class="formulario">
-        <div class="fila-campos">
-          <div class="campo">
-            <label>Rol</label>
-            <select name="rol">
-              <option value="Director">Director</option>
-              <option value="Codirector">Codirector</option>
-            </select>
-          </div>
-          <div class="campo">
-            <label>Profesor</label>
-            <select name="profesor_id">
-              {% for p in profesores %}
-                <option value="{{ p.id }}">{{ p.nombre }}{{ "" if p.nucleo_academico else " (externo)" }}</option>
-              {% endfor %}
-            </select>
-          </div>
-        </div>
-        <div class="campo">
-          <label>Acta en la que se aprobó</label>
-          <select name="acta_id">
-            <option value="">— Sin acta (agregar después) —</option>
-            {% for a in actas %}<option value="{{ a.id }}">{{ a.numero }}{% if a.fecha %} — {{ a.fecha }}{% endif %}</option>{% endfor %}
-          </select>
-        </div>
-        <p class="subtitulo" style="margin:-8px 0 4px;">¿No existe el acta todavía? <a href="{{ url_for('actas.nuevo') }}" target="_blank">Créala aquí</a> y vuelve a esta pantalla para seleccionarla.</p>
-        <div class="acciones-form">
-          <button class="btn" type="submit">Guardar</button>
-        </div>
-      </form>
-    </div>
+    <p class="subtitulo">Los cambios de Director/Codirector se hacen desde Actas, no aquí — esta pantalla es solo de consulta. <a href="{{ url_for('actas.nuevo') }}">+ Nueva acta</a></p>
 
     <div class="panel">
       <h2>Historial</h2>
@@ -356,17 +290,6 @@
   </div>
 
   <script>
-    var filtroComite = document.getElementById("filtro-profesores-comite");
-    if (filtroComite) {
-      filtroComite.addEventListener("input", function () {
-        var texto = filtroComite.value.trim().toLowerCase();
-        document.querySelectorAll("#lista-profesores-comite label").forEach(function (etiqueta) {
-          var coincide = etiqueta.dataset.nombre.indexOf(texto) !== -1;
-          etiqueta.style.display = coincide ? "" : "none";
-        });
-      });
-    }
-
     document.querySelectorAll(".tab-boton").forEach(function (boton) {
       boton.addEventListener("click", function () {
         document.querySelectorAll(".tab-boton").forEach(function (b) { b.classList.remove("activo"); });

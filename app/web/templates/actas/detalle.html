@@ -6,38 +6,51 @@
   <div class="cabecera-pagina">
     <div>
       <h1>Acta {{ acta.numero }}</h1>
-      <p class="subtitulo">{{ acta.fecha or "Sin fecha" }} · {{ acta.lugar or "" }}{% if acta.sede %}, {{ acta.sede }}{% endif %}</p>
+      <p class="subtitulo">{{ acta.fecha or "Sin fecha" }}{% if acta.resumen %} · {{ acta.resumen }}{% endif %}</p>
     </div>
     <a href="{{ url_for('actas.editar', acta_id=acta.id) }}" class="btn btn-secundario">Editar</a>
   </div>
 
   <div class="panel">
-    <h2>Generar documento del acta</h2>
-    <p class="subtitulo">Se genera como borrador .docx editable — revisa el texto antes de imprimir/firmar.</p>
-    <form method="get" action="{{ url_for('documentos.documento_acta', acta_id=acta.id) }}" class="formulario">
-      <div class="fila-campos">
-        <div class="campo">
-          <label>Coordinador(a) que firma</label>
-          <input type="text" name="coordinador_nombre" value="{{ coordinador_default }}">
-        </div>
-        <div class="campo">
-          <label>Lema del ciclo (opcional)</label>
-          <input type="text" name="lema_ciclo" placeholder='ej. "Año del..."'>
-        </div>
-      </div>
-      <div class="acciones-form">
-        <button class="btn" type="submit">Generar documento</button>
-      </div>
-    </form>
-  </div>
-
-  <div class="panel">
-    <h2>Orden del día y resolutivos</h2>
+    <h2>Puntos ({{ acta.puntos|length }})</h2>
     {% if acta.puntos %}
       {% for p in acta.puntos %}
         <div style="margin-bottom:16px; padding-bottom:16px; border-bottom:1px solid var(--gris-borde);">
           <p style="margin:0 0 4px; font-weight:600;">{{ loop.index }}. {{ p.titulo }}</p>
-          <p style="margin:0; color:var(--texto-suave);">{{ p.resolutivo or "(sin resolutivo capturado)" }}</p>
+          <p style="margin:0 0 12px; color:var(--texto-suave);">{{ p.resolutivo or "(sin resolutivo capturado)" }}</p>
+
+          {% if p.tipo == "direccion" and p.direccion_id %}
+            <form method="post" action="{{ url_for('documentos.documento_direccion', direccion_id=p.direccion_id) }}" class="formulario" style="max-width:600px;">
+              <div class="fila-campos">
+                <div class="campo">
+                  <label>Coordinador(a) que firma</label>
+                  <input type="text" name="coordinador_nombre" value="{{ coordinador_default }}">
+                </div>
+                <div class="campo">
+                  <label>Lema del ciclo (opcional)</label>
+                  <input type="text" name="lema_ciclo" placeholder='ej. "Año del..."'>
+                </div>
+              </div>
+              <div class="acciones-form">
+                <button class="btn btn-pequeno" type="submit" name="tipo" value="oficio">Generar oficio de asignación</button>
+                <button class="btn btn-pequeno btn-secundario" type="submit" name="tipo" value="constancia">Generar constancia</button>
+              </div>
+            </form>
+          {% elif p.tipo == "comite_tutorial" and p.comite_tutorial_id %}
+            <form method="post" action="{{ url_for('documentos.documento_comite', comite_id=p.comite_tutorial_id) }}" class="formulario" style="max-width:600px; margin-bottom:8px;">
+              <input type="hidden" name="tipo" value="alumno">
+              <input type="hidden" name="coordinador_nombre" value="{{ coordinador_default }}">
+              <button class="btn btn-pequeno" type="submit">Generar oficio para el alumno</button>
+            </form>
+            {% for m in p.miembros %}
+              <form method="post" action="{{ url_for('documentos.documento_comite', comite_id=p.comite_tutorial_id) }}" style="display:inline;">
+                <input type="hidden" name="tipo" value="docente">
+                <input type="hidden" name="profesor_id" value="{{ m.profesor_id }}">
+                <input type="hidden" name="coordinador_nombre" value="{{ coordinador_default }}">
+                <button class="btn btn-pequeno btn-secundario" type="submit" style="margin:0 4px 4px 0;">Oficio para {{ m.profesor.nombre }}</button>
+              </form>
+            {% endfor %}
+          {% endif %}
         </div>
       {% endfor %}
     {% else %}

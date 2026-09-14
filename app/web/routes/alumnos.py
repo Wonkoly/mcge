@@ -3,7 +3,6 @@ from urllib.parse import urlencode
 from flask import Blueprint, flash, redirect, render_template, request, url_for
 
 from app.models import Lector, Sinodal
-from app.repositories.acta_repository import listar_actas
 from app.repositories.alumno_repository import (
     buscar_alumnos_filtrado,
     obtener_alumno,
@@ -16,8 +15,6 @@ from app.repositories.direccion_repository import direcciones_vigentes, historia
 from app.repositories.profesor_repository import listar_profesores
 from app.repositories.titulacion_repository import lectores_de_alumno, sinodales_de_alumno
 from app.services.alumno_service import CodigoDuplicadoError, actualizar_alumno, crear_alumno
-from app.services.comite_service import asignar_comite_tutorial
-from app.services.direccion_service import asignar_direccion
 from app.services.configuracion_service import ciclo_escolar_vigente
 from app.services.titulacion_service import agregar_lector, agregar_sinodal, quitar_lector, quitar_sinodal
 from app.utils.fechas import PROGRAMA_SEMESTRES, semestre_desde_ciclo
@@ -131,42 +128,7 @@ def detalle(alumno_id):
         ciclo_sugerido=ciclo_escolar_vigente(session),
         lectores=lectores_de_alumno(session, alumno_id),
         sinodales=sinodales_de_alumno(session, alumno_id),
-        actas=listar_actas(session),
     )
-
-
-@bp.route("/<int:alumno_id>/direccion", methods=["POST"])
-def asignar_direccion_route(alumno_id):
-    session = get_session()
-    rol = request.form.get("rol")
-    profesor_id = request.form.get("profesor_id", type=int)
-    acta_id = request.form.get("acta_id", type=int)
-    if not rol or not profesor_id:
-        flash("Selecciona rol y profesor.", "error")
-        return redirect(url_for("alumnos.detalle", alumno_id=alumno_id))
-
-    _, aviso = asignar_direccion(session, alumno_id=alumno_id, profesor_id=profesor_id, rol=rol, acta_id=acta_id)
-    session.commit()
-    flash(f"{rol} asignado.", "exito")
-    if aviso:
-        flash(aviso, "aviso")
-    return redirect(url_for("alumnos.detalle", alumno_id=alumno_id))
-
-
-@bp.route("/<int:alumno_id>/comite", methods=["POST"])
-def asignar_comite_route(alumno_id):
-    session = get_session()
-    profesor_ids = [int(pid) for pid in request.form.getlist("profesor_ids")]
-    ciclo = request.form.get("ciclo") or ciclo_escolar_vigente(session)
-    acta_id = request.form.get("acta_id", type=int)
-    if not profesor_ids:
-        flash("Selecciona al menos un profesor para el comité tutorial.", "error")
-        return redirect(url_for("alumnos.detalle", alumno_id=alumno_id))
-
-    asignar_comite_tutorial(session, alumno_id=alumno_id, profesor_ids=profesor_ids, ciclo=ciclo, acta_id=acta_id)
-    session.commit()
-    flash("Comité tutorial actualizado.", "exito")
-    return redirect(url_for("alumnos.detalle", alumno_id=alumno_id))
 
 
 @bp.route("/<int:alumno_id>/lector", methods=["POST"])

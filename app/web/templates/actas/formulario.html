@@ -1,13 +1,92 @@
 {% extends "base.html" %}
 {% block titulo %}{{ "Editar acta" if acta else "Nueva acta" }}{% endblock %}
+
+{% macro bloque_punto(indice, punto=None) %}
+  {% set tipo = punto.tipo if punto else "otro" %}
+  {% set miembros_actuales = punto.miembros | map(attribute="profesor_id") | list if punto else [] %}
+  <div class="punto-fila panel" style="margin-bottom:12px;">
+    <div class="campo">
+      <label>Tipo de punto</label>
+      <select name="punto_tipo_{{ indice }}" class="punto-tipo-select">
+        {% for clave, etiqueta in tipos_punto.items() %}
+          <option value="{{ clave }}" {{ "selected" if tipo == clave else "" }}>{{ etiqueta }}</option>
+        {% endfor %}
+      </select>
+    </div>
+
+    <div class="campo punto-campo-alumno" style="display:none;">
+      <label>Alumno</label>
+      <select name="punto_alumno_id_{{ indice }}">
+        <option value="">— Selecciona —</option>
+        {% for a in alumnos %}
+          <option value="{{ a.id }}" {{ "selected" if punto and punto.alumno_id == a.id else "" }}>{{ a.nombre }} ({{ a.codigo }})</option>
+        {% endfor %}
+      </select>
+    </div>
+
+    <div class="punto-campos-direccion" style="display:none;">
+      <div class="fila-campos">
+        <div class="campo">
+          <label>Rol</label>
+          <select name="punto_rol_{{ indice }}">
+            <option value="Director" {{ "selected" if punto and punto.rol == "Director" else "" }}>Director</option>
+            <option value="Codirector" {{ "selected" if punto and punto.rol == "Codirector" else "" }}>Codirector</option>
+          </select>
+        </div>
+        <div class="campo">
+          <label>Profesor</label>
+          <select name="punto_profesor_id_{{ indice }}">
+            <option value="">— Selecciona —</option>
+            {% for p in profesores %}
+              <option value="{{ p.id }}" {{ "selected" if punto and punto.profesor_id == p.id else "" }}>{{ p.nombre }}</option>
+            {% endfor %}
+          </select>
+        </div>
+      </div>
+    </div>
+
+    <div class="punto-campos-comite_tutorial" style="display:none;">
+      <div class="campo">
+        <label>Ciclo</label>
+        <input type="text" name="punto_ciclo_{{ indice }}" value="{{ punto.ciclo if punto and punto.ciclo else ciclo_sugerido }}">
+      </div>
+      <div class="campo">
+        <label>Miembros (2-3 profesores)</label>
+        <input type="text" class="filtro-miembros" placeholder="Buscar profesor por nombre..." style="margin-bottom:8px;">
+        <div class="checklist-profesores">
+          {% for p in profesores %}
+            <label data-nombre="{{ p.nombre|lower }}">
+              <input type="checkbox" name="punto_miembro_ids_{{ indice }}" value="{{ p.id }}" {{ "checked" if p.id in miembros_actuales else "" }}>
+              {{ p.nombre }}{{ "" if p.nucleo_academico else " (externo)" }}
+            </label>
+          {% endfor %}
+        </div>
+      </div>
+    </div>
+
+    <div class="punto-campos-otro" style="display:none;">
+      <div class="campo">
+        <label>Título del punto</label>
+        <input type="text" name="punto_titulo_{{ indice }}" value="{{ punto.titulo if punto and tipo == 'otro' else '' }}">
+      </div>
+      <div class="campo">
+        <label>Resolutivo (lo que se acordó)</label>
+        <textarea name="punto_resolutivo_{{ indice }}" rows="2">{{ punto.resolutivo if punto and tipo == 'otro' else '' }}</textarea>
+      </div>
+    </div>
+
+    <button type="button" class="btn btn-secundario btn-pequeno" onclick="this.closest('.punto-fila').remove()">Quitar punto</button>
+  </div>
+{% endmacro %}
+
 {% block contenido %}
   <p><a href="{{ url_for('actas.listar') }}">&larr; Volver a actas</a></p>
   <h1>{{ "Editar acta " ~ acta.numero if acta else "Nueva acta" }}</h1>
   <p class="subtitulo">
-    Los puntos se numeran en el orden en que los agregues. Cada uno tiene un título (va en el
-    "ORDEN DEL DÍA" del documento) y un resolutivo (lo que se acordó, va en "RESOLUTIVOS").
-    No se generan tablas dentro de un punto (ej. listas de comité tutorial) — si hace falta, se
-    describen como texto dentro del resolutivo.
+    Un punto de "Asignación de Director/Codirector" o "Comité Tutorial" aplica el cambio real al
+    guardar el acta (crea la Dirección o el Comité Tutorial) — ya no se edita eso desde el
+    expediente del alumno. El título y el resolutivo de esos puntos se arman solos; "Otro" sigue
+    siendo texto libre.
   </p>
 
   <form class="formulario" method="post" style="max-width: 800px;">
@@ -22,57 +101,48 @@
       </div>
     </div>
 
-    <div class="fila-campos">
-      <div class="campo">
-        <label>Hora de inicio</label>
-        <input type="text" name="hora_inicio" placeholder="ej. 11:00" value="{{ acta.hora_inicio if acta else '' }}">
-      </div>
-      <div class="campo">
-        <label>Hora de cierre</label>
-        <input type="text" name="hora_fin" placeholder="ej. 12:00" value="{{ acta.hora_fin if acta else '' }}">
-      </div>
-    </div>
-
-    <div class="fila-campos">
-      <div class="campo">
-        <label>Lugar</label>
-        <input type="text" name="lugar" value="{{ acta.lugar if acta else 'Puerto Vallarta, Jalisco' }}">
-      </div>
-      <div class="campo">
-        <label>Sede (edificio/sala)</label>
-        <input type="text" name="sede" placeholder="ej. la Sala de Juntas" value="{{ acta.sede if acta else '' }}">
-      </div>
-    </div>
-
     <div class="campo">
-      <label>Asistentes (texto libre)</label>
-      <input type="text" name="asistentes" placeholder="ej. el Coordinador Dr. X; las profesoras Y, Z" value="{{ acta.asistentes if acta else '' }}">
-    </div>
-
-    <div class="campo">
-      <label>Resumen (para la lista de actas, no aparece en el documento)</label>
+      <label>Resumen (para la lista de actas, no aparece en ningún documento)</label>
       <input type="text" name="resumen" value="{{ acta.resumen if acta else '' }}">
     </div>
+
+    <details style="margin: 4px 0 8px;">
+      <summary style="cursor:pointer; font-size:13px; font-weight:600; color:var(--texto-suave);">Datos avanzados (hora, lugar, asistentes — solo si más adelante generas el documento formal del acta)</summary>
+      <div style="margin-top:12px;">
+        <div class="fila-campos">
+          <div class="campo">
+            <label>Hora de inicio</label>
+            <input type="text" name="hora_inicio" placeholder="ej. 11:00" value="{{ acta.hora_inicio if acta else '' }}">
+          </div>
+          <div class="campo">
+            <label>Hora de cierre</label>
+            <input type="text" name="hora_fin" placeholder="ej. 12:00" value="{{ acta.hora_fin if acta else '' }}">
+          </div>
+        </div>
+        <div class="fila-campos">
+          <div class="campo">
+            <label>Lugar</label>
+            <input type="text" name="lugar" value="{{ acta.lugar if acta else 'Puerto Vallarta, Jalisco' }}">
+          </div>
+          <div class="campo">
+            <label>Sede (edificio/sala)</label>
+            <input type="text" name="sede" placeholder="ej. la Sala de Juntas" value="{{ acta.sede if acta else '' }}">
+          </div>
+        </div>
+        <div class="campo">
+          <label>Asistentes (texto libre)</label>
+          <input type="text" name="asistentes" placeholder="ej. el Coordinador Dr. X; las profesoras Y, Z" value="{{ acta.asistentes if acta else '' }}">
+        </div>
+      </div>
+    </details>
 
     <hr style="border:none; border-top:1px solid var(--gris-borde); margin:8px 0;">
 
     <div class="campo">
-      <label>Puntos del orden del día</label>
+      <label>Puntos</label>
       <div id="puntos-container">
         {% if acta and acta.puntos %}
-          {% for p in acta.puntos %}
-            <div class="punto-fila panel" style="margin-bottom:12px;">
-              <div class="campo">
-                <label>Título del punto</label>
-                <input type="text" name="punto_titulo" value="{{ p.titulo }}">
-              </div>
-              <div class="campo">
-                <label>Resolutivo (lo que se acordó)</label>
-                <textarea name="punto_resolutivo" rows="2">{{ p.resolutivo or '' }}</textarea>
-              </div>
-              <button type="button" class="btn btn-secundario btn-pequeno" onclick="this.parentElement.remove()">Quitar punto</button>
-            </div>
-          {% endfor %}
+          {% for p in acta.puntos %}{{ bloque_punto(loop.index0, p) }}{% endfor %}
         {% endif %}
       </div>
       <button type="button" id="btn-agregar-punto" class="btn btn-secundario">+ Agregar punto</button>
@@ -85,23 +155,50 @@
   </form>
 
   <template id="plantilla-punto">
-    <div class="punto-fila panel" style="margin-bottom:12px;">
-      <div class="campo">
-        <label>Título del punto</label>
-        <input type="text" name="punto_titulo">
-      </div>
-      <div class="campo">
-        <label>Resolutivo (lo que se acordó)</label>
-        <textarea name="punto_resolutivo" rows="2"></textarea>
-      </div>
-      <button type="button" class="btn btn-secundario btn-pequeno" onclick="this.parentElement.remove()">Quitar punto</button>
-    </div>
+    {{ bloque_punto("__IDX__") }}
   </template>
 
   <script>
+    var siguienteIndice = {{ (acta.puntos|length) if acta and acta.puntos else 0 }};
+
+    function actualizarCamposPunto(bloque) {
+      var tipo = bloque.querySelector(".punto-tipo-select").value;
+      var campoAlumno = bloque.querySelector(".punto-campo-alumno");
+      var camposDireccion = bloque.querySelector(".punto-campos-direccion");
+      var camposComite = bloque.querySelector(".punto-campos-comite_tutorial");
+      var camposOtro = bloque.querySelector(".punto-campos-otro");
+      campoAlumno.style.display = (tipo === "otro") ? "none" : "";
+      camposDireccion.style.display = (tipo === "direccion") ? "" : "none";
+      camposComite.style.display = (tipo === "comite_tutorial") ? "" : "none";
+      camposOtro.style.display = (tipo === "otro") ? "" : "none";
+    }
+
+    document.getElementById("puntos-container").querySelectorAll(".punto-fila").forEach(actualizarCamposPunto);
+
+    document.getElementById("puntos-container").addEventListener("change", function (evento) {
+      if (evento.target.classList.contains("punto-tipo-select")) {
+        actualizarCamposPunto(evento.target.closest(".punto-fila"));
+      }
+    });
+
+    document.getElementById("puntos-container").addEventListener("input", function (evento) {
+      if (evento.target.classList.contains("filtro-miembros")) {
+        var texto = evento.target.value.trim().toLowerCase();
+        var bloque = evento.target.closest(".punto-fila");
+        bloque.querySelectorAll(".checklist-profesores label").forEach(function (etiqueta) {
+          etiqueta.style.display = etiqueta.dataset.nombre.indexOf(texto) !== -1 ? "" : "none";
+        });
+      }
+    });
+
     document.getElementById("btn-agregar-punto").addEventListener("click", function () {
-      var plantilla = document.getElementById("plantilla-punto").content.cloneNode(true);
-      document.getElementById("puntos-container").appendChild(plantilla);
+      var indice = siguienteIndice++;
+      var html = document.getElementById("plantilla-punto").innerHTML.split("__IDX__").join(indice);
+      var envoltura = document.createElement("div");
+      envoltura.innerHTML = html;
+      var bloque = envoltura.firstElementChild;
+      document.getElementById("puntos-container").appendChild(bloque);
+      actualizarCamposPunto(bloque);
     });
   </script>
 {% endblock %}

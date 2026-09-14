@@ -37,16 +37,55 @@ class Acta(Base, TimestampMixin):
 class PuntoActa(Base):
     """Un punto del orden del día de un Acta, con su resolutivo. Ver
     ejemplo real: 'Como punto número cuatro del orden del día... se
-    aprueba...'. No modela tablas dinámicas dentro del punto (ej. la lista
-    de comités tutoriales asignados) — eso se escribe como texto libre en
-    `resolutivo` por ahora."""
+    aprueba...'.
+
+    Desde Módulo 5 (Actas como fuente de cambios), un punto puede ser de
+    un `tipo` estructurado (`direccion`, `comite_tutorial`) en vez de solo
+    texto libre (`otro`, el comportamiento original): al guardar el Acta,
+    un punto estructurado dispara el alta/cambio real en
+    Direccion/ComiteTutorial (ver app/services/acta_service.py) — el
+    coordinador ya no edita esas dos secciones desde el expediente del
+    alumno, solo desde aquí. `direccion_id`/`comite_tutorial_id` guardan
+    el registro que ya se creó, para no duplicar al reeditar el acta y
+    para poder generar el oficio directamente desde el detalle del Acta.
+    No modela tablas dinámicas de puntos "otro" dentro del documento del
+    acta — eso se sigue escribiendo como texto libre en `resolutivo`."""
 
     __tablename__ = "punto_acta"
 
     id: Mapped[int] = mapped_column(primary_key=True)
     acta_id: Mapped[int] = mapped_column(ForeignKey("acta.id"))
     orden: Mapped[int] = mapped_column(Integer)
+    tipo: Mapped[str] = mapped_column(String(30), default="otro")  # "direccion" | "comite_tutorial" | "otro"
     titulo: Mapped[str] = mapped_column(String(300))  # texto que va en el "ORDEN DEL DIA"
     resolutivo: Mapped[Optional[str]] = mapped_column(String(2000))  # texto que va en "RESOLUTIVOS"
 
+    # Campos estructurados — solo aplican según `tipo`, ver docstring.
+    alumno_id: Mapped[Optional[int]] = mapped_column(ForeignKey("alumno.id"))
+    profesor_id: Mapped[Optional[int]] = mapped_column(ForeignKey("profesor.id"))  # tipo == "direccion"
+    rol: Mapped[Optional[str]] = mapped_column(String(12))  # "Director" | "Codirector", tipo == "direccion"
+    ciclo: Mapped[Optional[str]] = mapped_column(String(10))  # tipo == "comite_tutorial"
+
+    # Registro real ya creado por este punto (se llena al guardar).
+    direccion_id: Mapped[Optional[int]] = mapped_column(ForeignKey("direccion.id"))
+    comite_tutorial_id: Mapped[Optional[int]] = mapped_column(ForeignKey("comite_tutorial.id"))
+
     acta: Mapped["Acta"] = relationship(back_populates="puntos")
+    alumno = relationship("Alumno")
+    profesor = relationship("Profesor")
+    miembros: Mapped[list["PuntoActaMiembro"]] = relationship(cascade="all, delete-orphan")
+
+
+class PuntoActaMiembro(Base):
+    """Un profesor propuesto como miembro del comité tutorial dentro de un
+    punto `tipo == "comite_tutorial"` — mismo patrón que `ComiteMiembro`,
+    pero a nivel de punto de acta (todavía no es el `ComiteTutorial` real,
+    eso se crea al guardar el acta)."""
+
+    __tablename__ = "punto_acta_miembro"
+
+    id: Mapped[int] = mapped_column(primary_key=True)
+    punto_id: Mapped[int] = mapped_column(ForeignKey("punto_acta.id"))
+    profesor_id: Mapped[int] = mapped_column(ForeignKey("profesor.id"))
+
+    profesor = relationship("Profesor")

@@ -4,7 +4,7 @@ from app.models.configuracion import Configuracion
 from app.models.folio import FolioSecuencia
 from app.models.profesor import Profesor, ProfesorAlias
 from app.models.alumno import Alumno
-from app.models.acta import Acta, PuntoActa
+from app.models.acta import Acta, PuntoActa, PuntoActaMiembro
 from app.models.direccion import Direccion
 from app.models.comite import ComiteTutorial, ComiteMiembro
 from app.models.lector import Lector
@@ -23,6 +23,7 @@ __all__ = [
     "Alumno",
     "Acta",
     "PuntoActa",
+    "PuntoActaMiembro",
     "Direccion",
     "ComiteTutorial",
     "ComiteMiembro",
