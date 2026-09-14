@@ -15,12 +15,24 @@ from app.services.direccion_service import asignar_direccion
 # comportamiento original, texto libre. No hay histórico real todavía
 # para minar tipos recurrentes (0 puntos capturados en la BD al momento
 # de este cambio) — se siembra con los dos flujos que ya existían en el
-# expediente del alumno; se puede ampliar más adelante.
-TIPOS_PUNTO = {
-    "direccion": "Asignación de Director/Codirector de tesis",
-    "comite_tutorial": "Asignación/cambio de Comité Tutorial",
-    "otro": "Otro (texto libre)",
+# expediente del alumno; se puede ampliar más adelante (ver plan de
+# plantillas subibles desde la app, pendiente de alcance).
+TIPOS_PUNTO_INFO = {
+    "direccion": {
+        "etiqueta": "Asignación de Director/Codirector de tesis",
+        "descripcion": "Crea o cambia el Director o Codirector de tesis de un alumno. Deja listo el oficio de asignación para generar.",
+    },
+    "comite_tutorial": {
+        "etiqueta": "Asignación/cambio de Comité Tutorial",
+        "descripcion": "Asigna los profesores tutores de un alumno para el ciclo. Deja listos los oficios (al alumno y a cada tutor) para generar.",
+    },
+    "otro": {
+        "etiqueta": "Otro (texto libre)",
+        "descripcion": "Cualquier otro acuerdo que no encaje en los tipos anteriores — tú escribes el título y el resolutivo.",
+    },
 }
+
+TIPOS_PUNTO = {clave: info["etiqueta"] for clave, info in TIPOS_PUNTO_INFO.items()}
 
 
 class NumeroDuplicadoError(Exception):

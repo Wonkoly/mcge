@@ -1,81 +1,90 @@
 {% extends "base.html" %}
 {% block titulo %}{{ "Editar acta" if acta else "Nueva acta" }}{% endblock %}
 
-{% macro bloque_punto(indice, punto=None) %}
-  {% set tipo = punto.tipo if punto else "otro" %}
-  {% set miembros_actuales = punto.miembros | map(attribute="profesor_id") | list if punto else [] %}
-  <div class="punto-fila panel" style="margin-bottom:12px;">
+{% macro campos_punto_direccion(indice, punto=None) %}
+  <div class="campo campo-autocompletar campo-autocompletar-alumno">
+    <label>Alumno</label>
+    <input type="text" class="autocompletar-texto" placeholder="Escribe el nombre del alumno..." autocomplete="off"
+           value="{{ punto.alumno.nombre if punto and punto.alumno else '' }}">
+    <input type="hidden" name="punto_alumno_id_{{ indice }}" class="autocompletar-valor" value="{{ punto.alumno_id if punto else '' }}">
+    <div class="autocompletar-sugerencias"></div>
+  </div>
+  <div class="fila-campos">
     <div class="campo">
-      <label>Tipo de punto</label>
-      <select name="punto_tipo_{{ indice }}" class="punto-tipo-select">
-        {% for clave, etiqueta in tipos_punto.items() %}
-          <option value="{{ clave }}" {{ "selected" if tipo == clave else "" }}>{{ etiqueta }}</option>
-        {% endfor %}
+      <label>Rol</label>
+      <select name="punto_rol_{{ indice }}">
+        <option value="Director" {{ "selected" if punto and punto.rol == "Director" else "" }}>Director</option>
+        <option value="Codirector" {{ "selected" if punto and punto.rol == "Codirector" else "" }}>Codirector</option>
       </select>
     </div>
-
-    <div class="campo punto-campo-alumno" style="display:none;">
-      <label>Alumno</label>
-      <select name="punto_alumno_id_{{ indice }}">
-        <option value="">— Selecciona —</option>
-        {% for a in alumnos %}
-          <option value="{{ a.id }}" {{ "selected" if punto and punto.alumno_id == a.id else "" }}>{{ a.nombre }} ({{ a.codigo }})</option>
-        {% endfor %}
-      </select>
+    <div class="campo campo-autocompletar campo-autocompletar-profesor" data-fuente="profesores">
+      <label>Profesor</label>
+      <input type="text" class="autocompletar-texto" placeholder="Escribe el nombre del profesor..." autocomplete="off"
+             value="{{ punto.profesor.nombre if punto and punto.profesor else '' }}">
+      <input type="hidden" name="punto_profesor_id_{{ indice }}" class="autocompletar-valor" value="{{ punto.profesor_id if punto else '' }}">
+      <div class="autocompletar-sugerencias"></div>
     </div>
+  </div>
+{% endmacro %}
 
-    <div class="punto-campos-direccion" style="display:none;">
-      <div class="fila-campos">
-        <div class="campo">
-          <label>Rol</label>
-          <select name="punto_rol_{{ indice }}">
-            <option value="Director" {{ "selected" if punto and punto.rol == "Director" else "" }}>Director</option>
-            <option value="Codirector" {{ "selected" if punto and punto.rol == "Codirector" else "" }}>Codirector</option>
-          </select>
-        </div>
-        <div class="campo">
-          <label>Profesor</label>
-          <select name="punto_profesor_id_{{ indice }}">
-            <option value="">— Selecciona —</option>
-            {% for p in profesores %}
-              <option value="{{ p.id }}" {{ "selected" if punto and punto.profesor_id == p.id else "" }}>{{ p.nombre }}</option>
-            {% endfor %}
-          </select>
-        </div>
+{% macro campos_punto_comite(indice, punto=None) %}
+  {% set miembros_actuales = punto.miembros | map(attribute="profesor_id") | list if punto else [] %}
+  <div class="campo campo-autocompletar campo-autocompletar-alumno">
+    <label>Alumno</label>
+    <input type="text" class="autocompletar-texto" placeholder="Escribe el nombre del alumno..." autocomplete="off"
+           value="{{ punto.alumno.nombre if punto and punto.alumno else '' }}">
+    <input type="hidden" name="punto_alumno_id_{{ indice }}" class="autocompletar-valor" value="{{ punto.alumno_id if punto else '' }}">
+    <div class="autocompletar-sugerencias"></div>
+  </div>
+  <div class="campo">
+    <label>Ciclo</label>
+    <input type="text" name="punto_ciclo_{{ indice }}" value="{{ punto.ciclo if punto and punto.ciclo else ciclo_sugerido }}">
+  </div>
+  <div class="campo">
+    <label>Miembros (2-3 profesores)</label>
+    <input type="text" class="filtro-miembros" placeholder="Buscar profesor por nombre..." style="margin-bottom:8px;">
+    <div class="checklist-profesores">
+      {% for p in profesores %}
+        <label data-nombre="{{ p.nombre|lower }}">
+          <input type="checkbox" name="punto_miembro_ids_{{ indice }}" value="{{ p.id }}" {{ "checked" if p.id in miembros_actuales else "" }}>
+          {{ p.nombre }}{{ "" if p.nucleo_academico else " (externo)" }}
+        </label>
+      {% endfor %}
+    </div>
+  </div>
+{% endmacro %}
+
+{% macro campos_punto_otro(indice, punto=None) %}
+  <div class="campo">
+    <label>Título del punto</label>
+    <input type="text" name="punto_titulo_{{ indice }}" value="{{ punto.titulo if punto else '' }}">
+  </div>
+  <div class="campo">
+    <label>Resolutivo (lo que se acordó)</label>
+    <textarea name="punto_resolutivo_{{ indice }}" rows="3">{{ punto.resolutivo if punto else '' }}</textarea>
+  </div>
+{% endmacro %}
+
+{% macro bloque_punto(indice, punto=None, tipo=None) %}
+  {% set tipo = punto.tipo if punto else tipo %}
+  <div class="punto-resumen">
+    <div class="punto-resumen-texto">
+      <span class="punto-resumen-tipo">{{ tipos_punto_info[tipo].etiqueta }}</span>
+      <span class="punto-resumen-detalle"></span>
+    </div>
+    <div class="punto-resumen-acciones">
+      <button type="button" class="btn btn-pequeno btn-secundario btn-editar-punto">Editar</button>
+      <button type="button" class="btn btn-pequeno btn-secundario btn-quitar-punto">Quitar</button>
+    </div>
+    <div class="punto-campos-slot" style="display:none;">
+      <div class="punto-campos" data-tipo="{{ tipo }}">
+        <input type="hidden" name="punto_tipo_{{ indice }}" value="{{ tipo }}">
+        {% if tipo == "direccion" %}{{ campos_punto_direccion(indice, punto) }}
+        {% elif tipo == "comite_tutorial" %}{{ campos_punto_comite(indice, punto) }}
+        {% else %}{{ campos_punto_otro(indice, punto) }}
+        {% endif %}
       </div>
     </div>
-
-    <div class="punto-campos-comite_tutorial" style="display:none;">
-      <div class="campo">
-        <label>Ciclo</label>
-        <input type="text" name="punto_ciclo_{{ indice }}" value="{{ punto.ciclo if punto and punto.ciclo else ciclo_sugerido }}">
-      </div>
-      <div class="campo">
-        <label>Miembros (2-3 profesores)</label>
-        <input type="text" class="filtro-miembros" placeholder="Buscar profesor por nombre..." style="margin-bottom:8px;">
-        <div class="checklist-profesores">
-          {% for p in profesores %}
-            <label data-nombre="{{ p.nombre|lower }}">
-              <input type="checkbox" name="punto_miembro_ids_{{ indice }}" value="{{ p.id }}" {{ "checked" if p.id in miembros_actuales else "" }}>
-              {{ p.nombre }}{{ "" if p.nucleo_academico else " (externo)" }}
-            </label>
-          {% endfor %}
-        </div>
-      </div>
-    </div>
-
-    <div class="punto-campos-otro" style="display:none;">
-      <div class="campo">
-        <label>Título del punto</label>
-        <input type="text" name="punto_titulo_{{ indice }}" value="{{ punto.titulo if punto and tipo == 'otro' else '' }}">
-      </div>
-      <div class="campo">
-        <label>Resolutivo (lo que se acordó)</label>
-        <textarea name="punto_resolutivo_{{ indice }}" rows="2">{{ punto.resolutivo if punto and tipo == 'otro' else '' }}</textarea>
-      </div>
-    </div>
-
-    <button type="button" class="btn btn-secundario btn-pequeno" onclick="this.closest('.punto-fila').remove()">Quitar punto</button>
   </div>
 {% endmacro %}
 
@@ -84,9 +93,8 @@
   <h1>{{ "Editar acta " ~ acta.numero if acta else "Nueva acta" }}</h1>
   <p class="subtitulo">
     Un punto de "Asignación de Director/Codirector" o "Comité Tutorial" aplica el cambio real al
-    guardar el acta (crea la Dirección o el Comité Tutorial) — ya no se edita eso desde el
-    expediente del alumno. El título y el resolutivo de esos puntos se arman solos; "Otro" sigue
-    siendo texto libre.
+    guardar el acta — ya no se edita eso desde el expediente del alumno. Escribe el nombre en los
+    campos de alumno/profesor y elige de las sugerencias.
   </p>
 
   <form class="formulario" method="post" style="max-width: 800px;">
@@ -152,53 +160,166 @@
       <button class="btn" type="submit">Guardar acta</button>
       <a class="btn btn-secundario" href="{{ url_for('actas.listar') }}">Cancelar</a>
     </div>
+
+    {% for clave, info in tipos_punto_info.items() %}
+      <template id="plantilla-punto-{{ clave }}">{{ bloque_punto("__IDX__", tipo=clave) }}</template>
+    {% endfor %}
+
+    <dialog id="modal-elegir-tipo" class="modal-mcg">
+      <div class="modal-mcg-cabecera">
+        <h2>Agregar punto — elige el tipo</h2>
+        <button type="button" class="modal-mcg-cerrar" onclick="document.getElementById('modal-elegir-tipo').close()">&times;</button>
+      </div>
+      <div class="modal-mcg-cuerpo">
+        <div class="tarjetas-tipo-punto">
+          {% for clave, info in tipos_punto_info.items() %}
+            <button type="button" class="tarjeta-tipo-punto" data-tipo="{{ clave }}">
+              <div class="tarjeta-tipo-titulo">{{ info.etiqueta }}</div>
+              <div class="tarjeta-tipo-desc">{{ info.descripcion }}</div>
+            </button>
+          {% endfor %}
+        </div>
+      </div>
+    </dialog>
+
+    <dialog id="modal-punto" class="modal-mcg">
+      <div class="modal-mcg-cabecera">
+        <h2 id="modal-punto-titulo">Editar punto</h2>
+        <button type="button" class="modal-mcg-cerrar" onclick="document.getElementById('modal-punto').close()">&times;</button>
+      </div>
+      <div class="modal-mcg-cuerpo" id="modal-punto-cuerpo"></div>
+      <div class="modal-mcg-pie">
+        <button type="button" class="btn" onclick="document.getElementById('modal-punto').close()">Listo</button>
+      </div>
+    </dialog>
   </form>
 
-  <template id="plantilla-punto">
-    {{ bloque_punto("__IDX__") }}
-  </template>
+  <script id="datos-alumnos" type="application/json">{{ alumnos_json | tojson }}</script>
+  <script id="datos-profesores" type="application/json">{{ profesores_json | tojson }}</script>
 
   <script>
+    var TIPOS_PUNTO_ETIQUETAS = {{ tipos_punto | tojson }};
+    var DATOS_ALUMNOS = JSON.parse(document.getElementById("datos-alumnos").textContent);
+    var DATOS_PROFESORES = JSON.parse(document.getElementById("datos-profesores").textContent);
     var siguienteIndice = {{ (acta.puntos|length) if acta and acta.puntos else 0 }};
+    var bloqueEnEdicion = null;
 
-    function actualizarCamposPunto(bloque) {
-      var tipo = bloque.querySelector(".punto-tipo-select").value;
-      var campoAlumno = bloque.querySelector(".punto-campo-alumno");
-      var camposDireccion = bloque.querySelector(".punto-campos-direccion");
-      var camposComite = bloque.querySelector(".punto-campos-comite_tutorial");
-      var camposOtro = bloque.querySelector(".punto-campos-otro");
-      campoAlumno.style.display = (tipo === "otro") ? "none" : "";
-      camposDireccion.style.display = (tipo === "direccion") ? "" : "none";
-      camposComite.style.display = (tipo === "comite_tutorial") ? "" : "none";
-      camposOtro.style.display = (tipo === "otro") ? "" : "none";
+    // --- Autocompletar (alumno/profesor) ---
+    function filtrarSugerencias(lista, texto) {
+      texto = texto.toLowerCase();
+      return lista.filter(function (item) { return item.texto.toLowerCase().indexOf(texto) !== -1; }).slice(0, 8);
     }
 
-    document.getElementById("puntos-container").querySelectorAll(".punto-fila").forEach(actualizarCamposPunto);
+    function mostrarSugerencias(campo) {
+      var input = campo.querySelector(".autocompletar-texto");
+      var contenedor = campo.querySelector(".autocompletar-sugerencias");
+      var fuente = campo.dataset.fuente === "profesores" ? DATOS_PROFESORES : DATOS_ALUMNOS;
+      var texto = input.value.trim();
+      if (!texto) { contenedor.style.display = "none"; contenedor.innerHTML = ""; return; }
+      var coincidencias = filtrarSugerencias(fuente, texto);
+      contenedor.innerHTML = coincidencias.map(function (item) {
+        return '<div class="autocompletar-opcion" data-id="' + item.id + '">' + item.texto + '</div>';
+      }).join("");
+      coincidencias.forEach(function (item, i) {
+        contenedor.children[i].addEventListener("mousedown", function (evento) {
+          evento.preventDefault();
+          campo.querySelector(".autocompletar-texto").value = item.texto;
+          campo.querySelector(".autocompletar-valor").value = item.id;
+          contenedor.style.display = "none";
+        });
+      });
+      contenedor.style.display = coincidencias.length ? "block" : "none";
+    }
 
-    document.getElementById("puntos-container").addEventListener("change", function (evento) {
-      if (evento.target.classList.contains("punto-tipo-select")) {
-        actualizarCamposPunto(evento.target.closest(".punto-fila"));
-      }
-    });
-
-    document.getElementById("puntos-container").addEventListener("input", function (evento) {
-      if (evento.target.classList.contains("filtro-miembros")) {
+    document.addEventListener("input", function (evento) {
+      if (evento.target.classList.contains("autocompletar-texto")) {
+        var campo = evento.target.closest(".campo-autocompletar");
+        campo.querySelector(".autocompletar-valor").value = "";
+        mostrarSugerencias(campo);
+      } else if (evento.target.classList.contains("filtro-miembros")) {
         var texto = evento.target.value.trim().toLowerCase();
-        var bloque = evento.target.closest(".punto-fila");
-        bloque.querySelectorAll(".checklist-profesores label").forEach(function (etiqueta) {
+        var contenedorPunto = evento.target.closest(".punto-campos");
+        contenedorPunto.querySelectorAll(".checklist-profesores label").forEach(function (etiqueta) {
           etiqueta.style.display = etiqueta.dataset.nombre.indexOf(texto) !== -1 ? "" : "none";
         });
       }
     });
 
+    document.addEventListener("focus", function (evento) {
+      if (evento.target.classList.contains("autocompletar-texto")) {
+        mostrarSugerencias(evento.target.closest(".campo-autocompletar"));
+      }
+    }, true);
+
+    document.addEventListener("click", function (evento) {
+      if (evento.target.classList.contains("autocompletar-texto")) return;
+      document.querySelectorAll(".autocompletar-sugerencias").forEach(function (c) { c.style.display = "none"; });
+    });
+
+    // --- Resumen compacto de cada punto ---
+    function actualizarResumenPunto(bloque) {
+      var campos = bloque.querySelector(".punto-campos");
+      var tipo = campos.dataset.tipo;
+      var detalle;
+      if (tipo === "direccion") {
+        var alumno = campos.querySelector(".campo-autocompletar-alumno .autocompletar-texto").value || "(elige un alumno)";
+        var profesor = campos.querySelector(".campo-autocompletar-profesor .autocompletar-texto").value || "(elige un profesor)";
+        var rol = campos.querySelector("select[name^='punto_rol_']").value;
+        detalle = " — " + alumno + " · " + rol + ": " + profesor;
+      } else if (tipo === "comite_tutorial") {
+        var alumno2 = campos.querySelector(".campo-autocompletar-alumno .autocompletar-texto").value || "(elige un alumno)";
+        var marcados = campos.querySelectorAll(".checklist-profesores input:checked").length;
+        detalle = " — " + alumno2 + " · " + marcados + " miembro(s)";
+      } else {
+        var titulo = campos.querySelector("input[name^='punto_titulo_']").value;
+        detalle = titulo ? " — " + titulo : " — (sin título todavía)";
+      }
+      bloque.querySelector(".punto-resumen-detalle").textContent = detalle;
+    }
+
+    document.querySelectorAll("#puntos-container .punto-resumen").forEach(actualizarResumenPunto);
+
+    // --- Abrir/cerrar modal de edición de un punto ---
+    function abrirEdicionPunto(bloque) {
+      bloqueEnEdicion = bloque;
+      var campos = bloque.querySelector(".punto-campos");
+      document.getElementById("modal-punto-titulo").textContent = TIPOS_PUNTO_ETIQUETAS[campos.dataset.tipo] || "Editar punto";
+      document.getElementById("modal-punto-cuerpo").appendChild(campos);
+      document.getElementById("modal-punto").showModal();
+    }
+
+    document.getElementById("modal-punto").addEventListener("close", function () {
+      if (!bloqueEnEdicion) return;
+      var campos = document.getElementById("modal-punto-cuerpo").querySelector(".punto-campos");
+      bloqueEnEdicion.querySelector(".punto-campos-slot").appendChild(campos);
+      actualizarResumenPunto(bloqueEnEdicion);
+      bloqueEnEdicion = null;
+    });
+
+    document.getElementById("puntos-container").addEventListener("click", function (evento) {
+      var btnEditar = evento.target.closest(".btn-editar-punto");
+      if (btnEditar) { abrirEdicionPunto(btnEditar.closest(".punto-resumen")); return; }
+      var btnQuitar = evento.target.closest(".btn-quitar-punto");
+      if (btnQuitar) { btnQuitar.closest(".punto-resumen").remove(); }
+    });
+
+    // --- Agregar punto: elegir tipo -> crear bloque -> abrir edición ---
     document.getElementById("btn-agregar-punto").addEventListener("click", function () {
-      var indice = siguienteIndice++;
-      var html = document.getElementById("plantilla-punto").innerHTML.split("__IDX__").join(indice);
-      var envoltura = document.createElement("div");
-      envoltura.innerHTML = html;
-      var bloque = envoltura.firstElementChild;
-      document.getElementById("puntos-container").appendChild(bloque);
-      actualizarCamposPunto(bloque);
+      document.getElementById("modal-elegir-tipo").showModal();
+    });
+
+    document.querySelectorAll(".tarjeta-tipo-punto").forEach(function (tarjeta) {
+      tarjeta.addEventListener("click", function () {
+        var tipo = tarjeta.dataset.tipo;
+        document.getElementById("modal-elegir-tipo").close();
+        var indice = siguienteIndice++;
+        var html = document.getElementById("plantilla-punto-" + tipo).innerHTML.split("__IDX__").join(indice);
+        var envoltura = document.createElement("div");
+        envoltura.innerHTML = html;
+        var bloque = envoltura.firstElementChild;
+        document.getElementById("puntos-container").appendChild(bloque);
+        abrirEdicionPunto(bloque);
+      });
     });
   </script>
 {% endblock %}

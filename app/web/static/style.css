@@ -274,6 +274,50 @@ th .filtro-columna.filtro-activo .icono-filtro { color: var(--azul-acento); }
 .mas-filtros summary { cursor: pointer; font-size: 13px; color: var(--texto-suave); font-weight: 600; }
 .mas-filtros .mas-filtros-contenido { display: flex; gap: 10px; flex-wrap: wrap; margin-top: 10px; }
 
+/* --- Autocompletar (alumno/profesor) --- */
+.campo-autocompletar { position: relative; }
+.autocompletar-sugerencias {
+  display: none; position: absolute; top: 100%; left: 0; right: 0; z-index: 30;
+  background: var(--blanco); border: 1px solid var(--gris-borde); border-radius: 8px;
+  box-shadow: 0 4px 16px rgba(0,0,0,0.14); max-height: 220px; overflow-y: auto; margin-top: 4px;
+}
+.autocompletar-opcion { padding: 8px 12px; font-size: 14px; cursor: pointer; }
+.autocompletar-opcion:hover { background: var(--gris-fondo); }
+
+/* --- Puntos de Acta: filas compactas + modal --- */
+#puntos-container { counter-reset: punto; margin-bottom: 12px; }
+.punto-resumen {
+  counter-increment: punto;
+  display: flex; justify-content: space-between; align-items: center; gap: 12px;
+  padding: 12px 16px; border: 1px solid var(--gris-borde); border-radius: var(--radio);
+  margin-bottom: 8px; background: var(--blanco);
+}
+.punto-resumen-texto { font-size: 14px; }
+.punto-resumen-texto::before { content: counter(punto) ". "; font-weight: 700; }
+.punto-resumen-tipo { font-weight: 600; }
+.punto-resumen-detalle { color: var(--texto-suave); }
+.punto-resumen-acciones { display: flex; gap: 6px; flex-shrink: 0; }
+
+dialog.modal-mcg {
+  border: none; border-radius: 12px; padding: 0; max-width: 520px; width: 92vw;
+  box-shadow: 0 12px 40px rgba(0,0,0,0.25);
+}
+dialog.modal-mcg::backdrop { background: rgba(15,23,42,0.45); }
+.modal-mcg-cabecera { display: flex; justify-content: space-between; align-items: center; padding: 16px 20px; border-bottom: 1px solid var(--gris-borde); }
+.modal-mcg-cabecera h2 { margin: 0; font-size: 16px; }
+.modal-mcg-cuerpo { padding: 20px; max-height: 70vh; overflow-y: auto; }
+.modal-mcg-pie { padding: 14px 20px; border-top: 1px solid var(--gris-borde); display: flex; justify-content: flex-end; gap: 8px; }
+.modal-mcg-cerrar { background: none; border: none; font-size: 22px; cursor: pointer; color: var(--texto-suave); line-height: 1; padding: 0; }
+
+.tarjetas-tipo-punto { display: flex; flex-direction: column; gap: 10px; }
+.tarjeta-tipo-punto {
+  display: block; text-align: left; padding: 14px 16px; border: 1px solid var(--gris-borde);
+  border-radius: 10px; background: var(--blanco); cursor: pointer; width: 100%; font-family: inherit;
+}
+.tarjeta-tipo-punto:hover { border-color: var(--azul-acento); background: #f7f9ff; }
+.tarjeta-tipo-titulo { font-weight: 600; margin-bottom: 4px; }
+.tarjeta-tipo-desc { font-size: 13px; color: var(--texto-suave); }
+
 .tabs { display: flex; gap: 4px; border-bottom: 1px solid var(--gris-borde); margin-bottom: 20px; }
 .tab-boton {
   padding: 10px 18px; font-size: 14px; font-weight: 600; color: var(--texto-suave);

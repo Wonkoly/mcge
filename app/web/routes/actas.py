@@ -5,7 +5,7 @@ from flask import Blueprint, flash, redirect, render_template, request, url_for
 from app.repositories.acta_repository import listar_actas, obtener_acta
 from app.repositories.alumno_repository import buscar_alumnos
 from app.repositories.profesor_repository import listar_profesores
-from app.services.acta_service import TIPOS_PUNTO, NumeroDuplicadoError, actualizar_acta, crear_acta
+from app.services.acta_service import TIPOS_PUNTO, TIPOS_PUNTO_INFO, NumeroDuplicadoError, actualizar_acta, crear_acta
 from app.services.configuracion_service import ciclo_escolar_vigente
 from app.web.db import get_session
 
@@ -52,11 +52,16 @@ def _puntos_desde_form(form) -> list[dict]:
 
 
 def _contexto_formulario(session, acta=None):
+    alumnos = buscar_alumnos(session)
+    profesores = listar_profesores(session)
     return dict(
         acta=acta,
-        alumnos=buscar_alumnos(session),
-        profesores=listar_profesores(session),
+        alumnos=alumnos,
+        profesores=profesores,
+        alumnos_json=[{"id": a.id, "texto": f"{a.nombre} ({a.codigo})"} for a in alumnos],
+        profesores_json=[{"id": p.id, "texto": p.nombre} for p in profesores],
         tipos_punto=TIPOS_PUNTO,
+        tipos_punto_info=TIPOS_PUNTO_INFO,
         ciclo_sugerido=ciclo_escolar_vigente(session),
     )
 
