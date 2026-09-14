@@ -9,6 +9,9 @@
   <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
   <link rel="stylesheet" href="{{ url_for('static', filename='css/app.css') }}">
   <script src="{{ url_for('static', filename='js/htmx.min.js') }}"></script>
+  {# Alpine.js: vendorizado local (como htmx), sin build — reactividad declarativa
+     para pantallas con más interacción (ej. el taller de plantillas en Documentos). #}
+  <script src="{{ url_for('static', filename='js/alpine.min.js') }}" defer></script>
 </head>
 <body>
   <div class="app">

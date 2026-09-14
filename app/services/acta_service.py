@@ -162,18 +162,19 @@ def _reemplazar_puntos(session: Session, acta: Acta, puntos: list[dict], usuario
             titulo = _o_none(dato.get("titulo"))
             if not (dato.get("tipo_documento_id") and titulo):
                 continue
-            nuevos.append(
-                PuntoActa(
-                    orden=i + 1,
-                    tipo="personalizado",
-                    titulo=titulo,
-                    resolutivo=_o_none(dato.get("resolutivo")),
-                    alumno_id=dato.get("alumno_id"),
-                    profesor_id=dato.get("profesor_id"),
-                    tipo_documento_id=dato["tipo_documento_id"],
-                    datos_json=json.dumps(dato.get("campos_libres") or {}, ensure_ascii=False),
-                )
+            punto = PuntoActa(
+                orden=i + 1,
+                tipo="personalizado",
+                titulo=titulo,
+                resolutivo=_o_none(dato.get("resolutivo")),
+                alumno_id=dato.get("alumno_id"),
+                profesor_id=dato.get("profesor_id"),
+                tipo_documento_id=dato["tipo_documento_id"],
+                datos_json=json.dumps(dato.get("campos_libres") or {}, ensure_ascii=False),
             )
+            if dato.get("miembro_ids"):
+                punto.miembros = [PuntoActaMiembro(profesor_id=pid) for pid in dato["miembro_ids"]]
+            nuevos.append(punto)
 
         else:
             titulo = _o_none(dato.get("titulo"))

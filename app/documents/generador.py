@@ -12,18 +12,31 @@ El folio de cada documento se pide con app/services/folio_service.py
 (incremento atómico) — nunca se calcula aquí a mano, así dos PCs pidiendo
 folio del mismo tipo casi al mismo tiempo no pueden chocar."""
 
+import json
+import re
 from datetime import date
 from io import BytesIO
 
 from docxtpl import DocxTemplate
 from sqlalchemy.orm import Session
 
-import json
-
 from app.models.profesor import PREFIJO_POR_TRATAMIENTO
 
 from app.services.folio_service import siguiente_folio_formateado
 from app.utils.rutas import directorio_plantillas_personalizadas, directorio_recursos
+
+_PATRON_VARIABLE = re.compile(r"\{\{\s*(\w+)\s*\}\}")
+CAMPOS_OPCIONALES = {"lema_ciclo"}
+
+
+class CamposFaltantesError(Exception):
+    """El cuerpo de un tipo de documento personalizado usa una variable
+    que quedó vacía — se detecta ANTES de generar para no entregar un
+    oficio/constancia con huecos."""
+
+    def __init__(self, campos: list[str]):
+        self.campos = campos
+        super().__init__(f"Faltan datos para generar el documento: {', '.join(campos)}")
 
 TEMPLATES_DIR = directorio_recursos() / "app" / "documents" / "templates_docx"
 
@@ -395,12 +408,51 @@ def generar_documento_personalizado(
             {
                 "alumno_nombre": formatear_nombre(a.nombre),
                 "alumno_codigo": a.codigo,
-                "alumno_tesis_titulo": a.tesis_titulo or "",
                 "alumno_ciclo_ingreso": a.ciclo_ingreso or "",
+                "alumno_tesis_titulo": a.tesis_titulo or "",
+                "alumno_dictamen": a.dictamen or "",
+                "alumno_correo_institucional": a.correo_institucional or "",
+                "alumno_correo_personal": a.correo_personal or "",
+                "alumno_telefono": a.telefono or "",
+                "alumno_creditos_acumulados": a.creditos_acumulados if a.creditos_acumulados is not None else "",
+                "alumno_creditos_faltantes": a.creditos_faltantes if a.creditos_faltantes is not None else "",
+                "alumno_promedio": a.promedio if a.promedio is not None else "",
+                "alumno_cvu": a.cvu or "",
+                "alumno_lies": a.lies.nombre if a.lies else "",
+                "alumno_maximo_ciclo": a.maximo_ciclo or "",
             }
         )
     if punto.profesor is not None:
-        contexto["profesor_nombre"] = _nombre_con_tratamiento(punto.profesor)
+        p = punto.profesor
+        contexto.update(
+            {
+                "profesor_nombre": _nombre_con_tratamiento(p),
+                "profesor_nombre_simple": formatear_nombre(p.nombre),
+                "profesor_correo": p.correo or "",
+                "profesor_telefono": p.telefono or "",
+                "profesor_cvu": p.cvu or "",
+                "profesor_linea_investigacion": p.linea_investigacion or "",
+                "profesor_lies": p.lies.nombre if p.lies else "",
+                "profesor_sni": p.sni or "",
+                "profesor_centro_universitario": p.centro_universitario or "",
+            }
+        )
+    if punto.acta is not None:
+        acta = punto.acta
+        contexto.update(
+            {
+                "acta_numero": acta.numero,
+                "acta_fecha": fecha_larga(acta.fecha) if acta.fecha else "",
+                "acta_lugar": acta.lugar or "",
+                "acta_sede": acta.sede or "",
+                "acta_hora_inicio": acta.hora_inicio or "",
+                "acta_hora_fin": acta.hora_fin or "",
+                "acta_asistentes": acta.asistentes or "",
+            }
+        )
+
+    if punto.miembros:
+        contexto["profesores_lista"] = [{"nombre": _nombre_con_tratamiento(m.profesor)} for m in punto.miembros]
 
     contexto.update(
         {
@@ -412,6 +464,16 @@ def generar_documento_personalizado(
             "lema_ciclo": lema_ciclo,
         }
     )
+
+    variables_usadas = set(_PATRON_VARIABLE.findall(tipo_documento.cuerpo_texto or ""))
+    faltantes = sorted(
+        v for v in variables_usadas
+        if v not in CAMPOS_OPCIONALES and not str(contexto.get(v, "")).strip()
+    )
+    if "profesores_lista" in (tipo_documento.cuerpo_texto or "") and not contexto.get("profesores_lista"):
+        faltantes.append("profesores_lista (no se marcó ningún profesor)")
+    if faltantes:
+        raise CamposFaltantesError(faltantes)
 
     tpl = DocxTemplate(str(directorio_plantillas_personalizadas() / tipo_documento.plantilla_archivo))
     tpl.render(contexto)

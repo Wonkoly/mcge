@@ -9,7 +9,12 @@ from app.repositories.profesor_repository import listar_profesores
 from app.repositories.tipo_documento_repository import listar_tipos_confirmados
 from app.services.acta_service import TIPOS_PUNTO, TIPOS_PUNTO_INFO, NumeroDuplicadoError, actualizar_acta, crear_acta
 from app.services.configuracion_service import ciclo_escolar_vigente
-from app.services.tipo_documento_service import necesita_alumno, necesita_profesor, variables_libres
+from app.services.tipo_documento_service import (
+    necesita_alumno,
+    necesita_profesor,
+    necesita_profesores_lista,
+    variables_libres,
+)
 from app.web.db import get_session
 
 bp = Blueprint("actas", __name__, url_prefix="/actas")
@@ -66,6 +71,7 @@ def _puntos_desde_form(form) -> list[dict]:
                     "resolutivo": form.get(f"punto_resolutivo_{i}", ""),
                     "alumno_id": form.get(f"punto_alumno_id_{i}", type=int),
                     "profesor_id": form.get(f"punto_profesor_id_{i}", type=int),
+                    "miembro_ids": [int(v) for v in form.getlist(f"punto_profesores_lista_{i}")],
                     "campos_libres": campos_libres_por_indice.get(i, {}),
                 }
             )
@@ -86,6 +92,7 @@ def _contexto_formulario(session, acta=None):
     for t in tipos_personalizados:
         t.necesita_alumno = necesita_alumno(t.cuerpo_texto or "")
         t.necesita_profesor = necesita_profesor(t.cuerpo_texto or "")
+        t.necesita_profesores_lista = necesita_profesores_lista(t.cuerpo_texto or "")
         t.campos_libres = variables_libres(t.cuerpo_texto or "")
     if acta:
         for p in acta.puntos:

@@ -7,6 +7,10 @@ data/*.db*
 backups/
 Docs/
 
+# Moldes base institucionales subidos desde Documentos (membrete real) y
+# plantillas personalizadas ya confirmadas — datos de runtime, no código.
+plantillas_personalizadas/
+
 # Binario standalone de Tailwind (descargar con scripts/build_css.sh o desde
 # github.com/tailwindlabs/tailwindcss/releases) — no se versiona, ~40MB.
 .tools/

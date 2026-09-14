@@ -3,6 +3,7 @@ import re
 from flask import Blueprint, flash, redirect, render_template, request, send_file, url_for
 
 from app.documents.generador import (
+    CamposFaltantesError,
     generar_acta,
     generar_constancia_direccion,
     generar_constancia_evaluador_aspirantes,
@@ -16,7 +17,7 @@ from app.documents.generador import (
     generar_oficio_invitacion_jurado,
     generar_oficio_permiso_municipio,
 )
-from app.documents.variables_disponibles import VARIABLES_ALUMNO, VARIABLES_GENERALES, VARIABLES_PROFESOR
+from app.documents.variables_disponibles import GRUPOS_VARIABLES
 from app.models import Alumno, ComiteTutorial, Direccion, Lector, Profesor, PuntoActa, Sinodal
 from app.repositories.acta_repository import obtener_acta
 from app.repositories.profesor_repository import listar_profesores
@@ -26,9 +27,12 @@ from app.services.tipo_documento_service import (
     CATEGORIAS_VALIDAS,
     MoldeFaltanteError,
     actualizar_cuerpo,
+    actualizar_metadatos,
     compilar_plantilla,
     confirmar_plantilla,
     crear_tipo,
+    ejemplos_variables,
+    eliminar_tipo,
     guardar_molde_base,
     variables_libres,
 )
@@ -117,15 +121,50 @@ def tipos_detalle(tipo_id):
         flash("Cuerpo guardado.", "exito")
         return redirect(url_for("documentos.tipos_detalle", tipo_id=tipo.id))
 
+    ejemplos = ejemplos_variables(session)
+    variables_buscables = [
+        {"grupo": grupo, "clave": clave, "etiqueta": etiqueta, "ejemplo": ejemplos.get(clave, "")}
+        for grupo, campos in GRUPOS_VARIABLES.items()
+        for clave, etiqueta in campos.items()
+    ]
+
     return render_template(
         "documentos/tipos_detalle.html",
         tipo=tipo,
         molde=listar_moldes(session).get(tipo.categoria),
-        variables_alumno=VARIABLES_ALUMNO,
-        variables_profesor=VARIABLES_PROFESOR,
-        variables_generales=VARIABLES_GENERALES,
+        variables_buscables=variables_buscables,
         libres=variables_libres(tipo.cuerpo_texto or ""),
     )
+
+
+@bp.route("/tipos/<int:tipo_id>/editar", methods=["POST"])
+def tipos_editar(tipo_id):
+    session = get_session()
+    tipo = obtener_tipo(session, tipo_id)
+    if tipo is None:
+        flash("Tipo de documento no encontrado.", "error")
+        return redirect(url_for("documentos.index"))
+    try:
+        actualizar_metadatos(tipo, etiqueta=request.form.get("etiqueta", ""), descripcion=request.form.get("descripcion", ""))
+        session.commit()
+        flash("Datos actualizados.", "exito")
+    except ValueError as exc:
+        flash(str(exc), "error")
+    return redirect(url_for("documentos.tipos_detalle", tipo_id=tipo.id))
+
+
+@bp.route("/tipos/<int:tipo_id>/eliminar", methods=["POST"])
+def tipos_eliminar(tipo_id):
+    session = get_session()
+    tipo = obtener_tipo(session, tipo_id)
+    if tipo is None:
+        flash("Tipo de documento no encontrado.", "error")
+        return redirect(url_for("documentos.index"))
+    etiqueta = tipo.etiqueta
+    eliminar_tipo(session, tipo)
+    session.commit()
+    flash(f'"{etiqueta}" eliminado.', "exito")
+    return redirect(url_for("documentos.index"))
 
 
 @bp.route("/tipos/<int:tipo_id>/generar", methods=["GET"])
@@ -168,10 +207,14 @@ def documento_personalizado(punto_id):
         return redirect(url_for("actas.listar"))
 
     coordinador_nombre, lema_ciclo = _coordinador_y_lema(session)
-    buffer = generar_documento_personalizado(
-        session=session, tipo_documento=punto.tipo_documento, punto=punto,
-        coordinador_nombre=coordinador_nombre, lema_ciclo=lema_ciclo,
-    )
+    try:
+        buffer = generar_documento_personalizado(
+            session=session, tipo_documento=punto.tipo_documento, punto=punto,
+            coordinador_nombre=coordinador_nombre, lema_ciclo=lema_ciclo,
+        )
+    except CamposFaltantesError as exc:
+        flash(f"No se generó el documento — {exc}", "error")
+        return redirect(url_for("actas.detalle", acta_id=punto.acta_id))
     return _descargar(buffer, _nombre_archivo(f"{punto.tipo_documento.etiqueta} {punto.titulo}"))
 
 

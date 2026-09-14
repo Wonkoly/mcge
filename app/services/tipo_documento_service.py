@@ -2,13 +2,15 @@ import re
 from io import BytesIO
 
 from docx import Document
+from docx.shared import Pt
 from sqlalchemy.orm import Session
 
 from app.documents.variables_disponibles import TODAS_LAS_VARIABLES, VARIABLES_ALUMNO, VARIABLES_PROFESOR
-from app.models import PlantillaBase, TipoDocumentoPersonalizado
+from app.models import Acta, Alumno, PlantillaBase, Profesor, TipoDocumentoPersonalizado
 from app.utils.rutas import directorio_plantillas_personalizadas
 
 CATEGORIAS_VALIDAS = ("oficio", "constancia")
+FUENTE_DOCUMENTOS = "Arial"
 
 CUERPO_INICIAL = {
     "oficio": (
@@ -86,6 +88,96 @@ def actualizar_cuerpo(session: Session, tipo: TipoDocumentoPersonalizado, cuerpo
     tipo.cuerpo_texto = cuerpo_texto
 
 
+def actualizar_metadatos(tipo: TipoDocumentoPersonalizado, *, etiqueta: str, descripcion: str = "") -> None:
+    etiqueta = (etiqueta or "").strip()
+    if not etiqueta:
+        raise ValueError("La etiqueta es obligatoria")
+    tipo.etiqueta = etiqueta
+    tipo.descripcion = (descripcion or "").strip() or None
+
+
+def eliminar_tipo(session: Session, tipo: TipoDocumentoPersonalizado) -> None:
+    """Para "rehacer" uno mal armado desde cero — si ya estaba confirmado y
+    en uso en algún punto de Acta, esos puntos quedan con `tipo_documento`
+    nulo (el documento ya generado no se pierde, pero ya no se podrá
+    regenerar desde ahí sin recrear el tipo)."""
+    if tipo.plantilla_archivo:
+        ruta = directorio_plantillas_personalizadas() / tipo.plantilla_archivo
+        ruta.unlink(missing_ok=True)
+    session.delete(tipo)
+
+
+def ejemplos_variables(session: Session) -> dict[str, str]:
+    """Un valor de ejemplo real (no inventado) por variable, para que el
+    buscador del taller muestre cómo se ve cada dato antes de insertarlo.
+    Toma el primer alumno/profesor/acta que haya en la base — si todavía
+    no hay datos, la variable simplemente no aparece con ejemplo."""
+    ejemplos: dict[str, str] = {}
+
+    alumno = session.query(Alumno).order_by(Alumno.id).first()
+    if alumno:
+        ejemplos.update(
+            {
+                "alumno_nombre": alumno.nombre,
+                "alumno_codigo": alumno.codigo,
+                "alumno_ciclo_ingreso": alumno.ciclo_ingreso or "",
+                "alumno_tesis_titulo": alumno.tesis_titulo or "",
+                "alumno_dictamen": alumno.dictamen or "",
+                "alumno_correo_institucional": alumno.correo_institucional or "",
+                "alumno_correo_personal": alumno.correo_personal or "",
+                "alumno_telefono": alumno.telefono or "",
+                "alumno_creditos_acumulados": str(alumno.creditos_acumulados or ""),
+                "alumno_creditos_faltantes": str(alumno.creditos_faltantes or ""),
+                "alumno_promedio": str(alumno.promedio or ""),
+                "alumno_cvu": alumno.cvu or "",
+                "alumno_lies": alumno.lies.nombre if alumno.lies else "",
+                "alumno_maximo_ciclo": alumno.maximo_ciclo or "",
+            }
+        )
+
+    profesor = session.query(Profesor).filter(Profesor.tratamiento.isnot(None)).order_by(Profesor.id).first()
+    if profesor:
+        from app.documents.generador import _nombre_con_tratamiento, formatear_nombre
+
+        ejemplos.update(
+            {
+                "profesor_nombre": _nombre_con_tratamiento(profesor),
+                "profesor_nombre_simple": formatear_nombre(profesor.nombre),
+                "profesor_correo": profesor.correo or "",
+                "profesor_telefono": profesor.telefono or "",
+                "profesor_cvu": profesor.cvu or "",
+                "profesor_linea_investigacion": profesor.linea_investigacion or "",
+                "profesor_lies": profesor.lies.nombre if profesor.lies else "",
+                "profesor_sni": profesor.sni or "",
+                "profesor_centro_universitario": profesor.centro_universitario or "",
+            }
+        )
+
+    acta = session.query(Acta).order_by(Acta.id.desc()).first()
+    if acta:
+        ejemplos.update(
+            {
+                "acta_numero": acta.numero,
+                "acta_fecha": str(acta.fecha or ""),
+                "acta_lugar": acta.lugar or "",
+                "acta_sede": acta.sede or "",
+                "acta_hora_inicio": acta.hora_inicio or "",
+                "acta_hora_fin": acta.hora_fin or "",
+                "acta_asistentes": acta.asistentes or "",
+            }
+        )
+
+    ejemplos.update(
+        {
+            "numero_documento": "CUCPV/MCG/001/2026",
+            "fecha_larga": "14 de septiembre de 2026",
+            "coordinador_nombre": "Dr. Héctor Javier Rendón Contreras",
+            "lema_ciclo": "",
+        }
+    )
+    return ejemplos
+
+
 def variables_libres(cuerpo_texto: str) -> list[str]:
     """Variables que aparecen en el cuerpo pero no son del catálogo fijo
     (alumno/profesor/generales) — ej. destinatario_nombre. Se piden como
@@ -100,6 +192,15 @@ def necesita_alumno(cuerpo_texto: str) -> bool:
 
 def necesita_profesor(cuerpo_texto: str) -> bool:
     return any(v in VARIABLES_PROFESOR for v in _PATRON_VARIABLE.findall(cuerpo_texto or ""))
+
+
+def necesita_profesores_lista(cuerpo_texto: str) -> bool:
+    """`profesores_lista` no es un {{ variable }} plano — se usa dentro de
+    un bucle ({%for p in profesores_lista%}{{ p.nombre }}{%endfor%}) para
+    formatos que enlistan a varios profesores (ej. un oficio dirigido a
+    todo un comité). Se detecta por texto simple, no con el regex de
+    {{ }} — ver ejemplo ya probado en oficio_comite_tutorial_alumno.docx."""
+    return "profesores_lista" in (cuerpo_texto or "")
 
 
 def compilar_plantilla(session: Session, tipo: TipoDocumentoPersonalizado) -> BytesIO:
@@ -117,7 +218,13 @@ def compilar_plantilla(session: Session, tipo: TipoDocumentoPersonalizado) -> By
     ruta_molde = directorio_plantillas_personalizadas() / molde.archivo
     doc = Document(str(ruta_molde))
     for linea in (tipo.cuerpo_texto or "").split("\n"):
-        doc.add_paragraph(linea)
+        p = doc.add_paragraph()
+        run = p.add_run(linea)
+        # Arial fijo en el cuerpo agregado, sin importar qué fuente traiga el
+        # molde por defecto — así el texto compuesto en el taller siempre
+        # sale con la tipografía institucional pedida.
+        run.font.name = FUENTE_DOCUMENTOS
+        run.font.size = Pt(11)
 
     buffer = BytesIO()
     doc.save(buffer)

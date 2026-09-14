@@ -93,6 +93,21 @@
       <div class="autocompletar-sugerencias"></div>
     </div>
   {% endif %}
+  {% if tipo_documento.necesita_profesores_lista %}
+    {% set miembros_actuales = punto.miembros | map(attribute="profesor_id") | list if punto else [] %}
+    <div class="campo">
+      <label>Profesores (lista)</label>
+      <input type="text" class="filtro-miembros" placeholder="Buscar profesor por nombre..." style="margin-bottom:8px;">
+      <div class="checklist-profesores">
+        {% for p in profesores %}
+          <label data-nombre="{{ p.nombre|lower }}">
+            <input type="checkbox" name="punto_profesores_lista_{{ indice }}" value="{{ p.id }}" {{ "checked" if p.id in miembros_actuales else "" }}>
+            {{ p.nombre }}{{ "" if p.nucleo_academico else " (externo)" }}
+          </label>
+        {% endfor %}
+      </div>
+    </div>
+  {% endif %}
   {% for clave in tipo_documento.campos_libres %}
     <div class="campo">
       <label>{{ clave.replace('_', ' ') | capitalize }}</label>

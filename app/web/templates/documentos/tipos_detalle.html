@@ -1,114 +1,165 @@
 {% extends "base.html" %}
 {% block titulo %}{{ tipo.etiqueta }}{% endblock %}
 {% block contenido %}
-  <p><a href="{{ url_for('documentos.index') }}">&larr; Volver a Documentos</a></p>
+<div class="mx-auto max-w-6xl" x-data="editorDeCuerpo()">
+  <a href="{{ url_for('documentos.index') }}" class="text-sm text-gray-500 hover:text-brand-600">&larr; Volver a Documentos</a>
 
-  <div class="cabecera-pagina">
-    <div>
-      <h1>{{ tipo.etiqueta }}</h1>
-      <p class="subtitulo">
-        {{ "Oficio" if tipo.categoria == "oficio" else "Constancia" }} ·
-        <span class="badge {{ 'badge-activo' if tipo.estado == 'confirmado' else '' }}">
-          {{ "Confirmado — ya aparece en Actas" if tipo.estado == "confirmado" else "Borrador" }}
-        </span>
-      </p>
+  <div class="mt-2 flex items-start justify-between gap-4">
+    <div x-show="!editandoTitulo" class="flex items-center gap-3">
+      <h1 class="text-2xl font-bold text-gray-900">{{ tipo.etiqueta }}</h1>
+      <button type="button" @click="editandoTitulo = true" class="text-xs text-gray-400 hover:text-brand-600 underline">editar</button>
     </div>
+    <form x-show="editandoTitulo" method="post" action="{{ url_for('documentos.tipos_editar', tipo_id=tipo.id) }}" class="flex flex-1 items-center gap-2">
+      <input type="text" name="etiqueta" value="{{ tipo.etiqueta }}" class="rounded-lg border border-gray-300 px-3 py-1.5 text-sm flex-1" required>
+      <input type="text" name="descripcion" value="{{ tipo.descripcion or '' }}" placeholder="Descripción" class="rounded-lg border border-gray-300 px-3 py-1.5 text-sm flex-1">
+      <button type="submit" class="rounded-lg bg-brand-500 px-3 py-1.5 text-xs font-semibold text-white hover:bg-brand-600">Guardar</button>
+    </form>
+
+    <form method="post" action="{{ url_for('documentos.tipos_eliminar', tipo_id=tipo.id) }}"
+          onsubmit="return confirm('¿Eliminar \'{{ tipo.etiqueta }}\'? Esto borra también la plantilla ya confirmada, si existía.');">
+      <button type="submit" class="shrink-0 rounded-lg border border-gray-200 px-3 py-1.5 text-xs font-semibold text-red-600 hover:bg-red-50">Eliminar</button>
+    </form>
   </div>
 
+  <p class="mt-1 text-sm text-gray-500">
+    {{ "Oficio" if tipo.categoria == "oficio" else "Constancia" }} ·
+    <span class="inline-flex rounded-full px-2.5 py-0.5 text-xs font-semibold"
+          style="{{ 'background-color: var(--color-status-activo-bg); color: var(--color-status-activo);' if tipo.estado == 'confirmado' else 'background-color: #eef1f8; color: #6b7280;' }}">
+      {{ "Confirmado — ya aparece en Actas" if tipo.estado == "confirmado" else "Borrador" }}
+    </span>
+  </p>
+
   {% if not molde or not molde.archivo %}
-    <div class="mensaje mensaje-error" style="margin-bottom:20px;">
+    <div class="mt-4 rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
       Todavía no hay un molde base subido para "{{ tipo.categoria }}". Súbelo primero en
-      <a href="{{ url_for('documentos.index') }}">Documentos</a> — sin eso no se puede generar ni
-      la vista previa ni la plantilla definitiva.
+      <a href="{{ url_for('documentos.index') }}" class="underline">Documentos</a> — sin eso no se puede generar
+      ni la vista previa ni la plantilla definitiva.
     </div>
   {% endif %}
 
-  <div class="editor-dos-columnas">
+  <div class="mt-6 grid grid-cols-1 gap-6 lg:grid-cols-[1fr_320px]">
     <div>
       <form method="post">
-        <div class="campo">
-          <label>Cuerpo del documento</label>
-          <p class="subtitulo" style="margin:0 0 8px;">
-            Cada renglón es un párrafo. Escribe libremente e inserta variables desde el panel de
-            la derecha — el membrete (logos, pie de página) lo pone el molde base, no se edita
-            aquí.
-          </p>
-          <textarea id="cuerpo-texto" name="cuerpo_texto" rows="22" style="font-family: 'Consolas', monospace; font-size:13px;">{{ tipo.cuerpo_texto or "" }}</textarea>
-        </div>
-        <div class="acciones-form">
-          <button class="btn" type="submit">Guardar cuerpo</button>
+        <label class="mb-1.5 block text-sm font-medium text-gray-700">Cuerpo del documento</label>
+        <p class="mb-2 text-xs text-gray-500">
+          Cada renglón es un párrafo. Escribe libremente e inserta datos desde el buscador de la derecha —
+          el membrete (logos, pie de página) lo pone el molde base, no se edita aquí. Se genera siempre en Arial.
+        </p>
+        <textarea x-ref="cuerpo" name="cuerpo_texto" rows="20"
+                  class="w-full rounded-lg border border-gray-300 px-3 py-2 font-mono text-[13px] text-gray-900 focus:border-brand-500 focus:outline-none focus:ring-1 focus:ring-brand-500">{{ tipo.cuerpo_texto or "" }}</textarea>
+        <div class="mt-3 flex flex-wrap gap-2">
+          <button type="submit" class="rounded-lg bg-brand-500 px-4 py-2 text-sm font-semibold text-white hover:bg-brand-600">Guardar cuerpo</button>
+          <button type="button" @click="insertarListaProfesores()"
+                  class="rounded-lg border border-gray-300 bg-white px-4 py-2 text-sm font-semibold text-gray-700 hover:border-brand-500">
+            + Insertar lista de profesores
+          </button>
         </div>
       </form>
 
-      <div class="panel" style="margin-top:20px;">
-        <h2>Generar y confirmar</h2>
-        <p class="subtitulo">
-          "Generar vista previa" descarga el .docx con el membrete del molde + tu cuerpo (con las
-          etiquetas {{ '{{ }}' }} tal cual, sin datos de ejemplo) para revisar que se vea bien.
-          "Confirmar" lo deja como la plantilla definitiva — a partir de ahí ya aparece como
-          opción al agregar un punto en Actas. Puedes editar el cuerpo y volver a confirmar las
-          veces que haga falta.
+      <div class="mt-6 rounded-xl border border-gray-200 bg-white p-5">
+        <h2 class="text-sm font-semibold text-gray-900">Generar y confirmar</h2>
+        <p class="mt-1 text-xs text-gray-500">
+          "Generar vista previa" descarga el .docx con el membrete del molde + tu cuerpo (con las etiquetas
+          <code class="rounded bg-gray-100 px-1">{{ '{{ }}' | e }}</code> tal cual) para revisar que se vea bien.
+          "Confirmar" lo deja como la plantilla definitiva — a partir de ahí ya aparece como opción al agregar un
+          punto en Actas. Puedes editar el cuerpo y volver a confirmar las veces que haga falta.
         </p>
-        <div class="acciones-form">
-          <a class="btn btn-secundario" href="{{ url_for('documentos.tipos_generar', tipo_id=tipo.id) }}">Generar vista previa</a>
+        <div class="mt-3 flex flex-wrap gap-2">
+          <a href="{{ url_for('documentos.tipos_generar', tipo_id=tipo.id) }}"
+             class="rounded-lg border border-gray-300 bg-white px-4 py-2 text-sm font-semibold text-gray-700 hover:border-brand-500">Generar vista previa</a>
           <form method="post" action="{{ url_for('documentos.tipos_confirmar', tipo_id=tipo.id) }}">
-            <button class="btn" type="submit">Confirmar como definitiva</button>
+            <button type="submit" class="rounded-lg bg-brand-500 px-4 py-2 text-sm font-semibold text-white hover:bg-brand-600">Confirmar como definitiva</button>
           </form>
         </div>
       </div>
 
       {% if libres %}
-        <div class="panel" style="margin-top:20px;">
-          <h2>Campos libres detectados</h2>
-          <p class="subtitulo">No son de alumno/profesor ni generales — se van a pedir como texto libre cada vez que se use este tipo desde una Acta.</p>
-          <ul class="lista-simple">
-            {% for clave in libres %}<li><code>{{ clave }}</code></li>{% endfor %}
+        <div class="mt-6 rounded-xl border border-gray-200 bg-white p-5">
+          <h2 class="text-sm font-semibold text-gray-900">Campos libres detectados</h2>
+          <p class="mt-1 text-xs text-gray-500">No son de alumno/profesor/acta ni generales — se piden como texto libre cada vez que se use este tipo desde una Acta.</p>
+          <ul class="mt-2 flex flex-wrap gap-2">
+            {% for clave in libres %}<li class="rounded-full bg-gray-100 px-2.5 py-1 text-xs text-gray-700">{{ clave }}</li>{% endfor %}
           </ul>
         </div>
       {% endif %}
     </div>
 
-    <div class="panel-variables">
-      <h2 style="font-size:14px;">Insertar dato</h2>
-      <div class="grupo-variables">
-        <h3>Alumno</h3>
-        {% for clave, etiqueta in variables_alumno.items() %}
-          <button type="button" class="chip-variable" data-clave="{{ clave }}">{{ etiqueta }}</button>
-        {% endfor %}
+    <div class="lg:sticky lg:top-5 lg:self-start">
+      <div class="rounded-xl border border-gray-200 bg-white p-4">
+        <label class="mb-2 block text-xs font-semibold uppercase tracking-wide text-gray-500">Buscar dato para insertar</label>
+        <input type="text" x-model="busqueda" placeholder="ej. nombre, código, correo..."
+               class="mb-3 w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-brand-500 focus:outline-none focus:ring-1 focus:ring-brand-500">
+
+        <div class="max-h-[60vh] space-y-4 overflow-y-auto">
+          <template x-for="grupo in Object.keys(agrupadas)" :key="grupo">
+            <div>
+              <h3 class="mb-1 text-xs font-semibold uppercase tracking-wide text-gray-400" x-text="grupo"></h3>
+              <template x-for="v in agrupadas[grupo]" :key="v.clave">
+                <button type="button" @click="insertar(v.clave)"
+                        class="mb-1.5 block w-full rounded-lg border border-gray-200 bg-gray-50 px-3 py-2 text-left hover:border-brand-500 hover:bg-brand-50">
+                  <div class="text-xs font-medium text-gray-800" x-text="v.etiqueta"></div>
+                  <div class="mt-0.5 truncate text-[11px] text-gray-400" x-show="v.ejemplo" x-text="'ej: ' + v.ejemplo"></div>
+                </button>
+              </template>
+            </div>
+          </template>
+          <p x-show="Object.keys(agrupadas).length === 0" class="text-xs text-gray-400">Sin resultados para esa búsqueda.</p>
+        </div>
+
+        <p class="mt-3 border-t border-gray-100 pt-3 text-[11px] text-gray-400">
+          ¿Necesitas otro dato (ej. a quién va dirigido)? Escríbelo tú mismo como
+          <code class="rounded bg-gray-100 px-1">destinatario_nombre</code> directamente en el cuerpo — se detecta
+          solo y se pide como texto libre al generar el documento.
+        </p>
       </div>
-      <div class="grupo-variables">
-        <h3>Profesor</h3>
-        {% for clave, etiqueta in variables_profesor.items() %}
-          <button type="button" class="chip-variable" data-clave="{{ clave }}">{{ etiqueta }}</button>
-        {% endfor %}
-      </div>
-      <div class="grupo-variables">
-        <h3>General</h3>
-        {% for clave, etiqueta in variables_generales.items() %}
-          <button type="button" class="chip-variable" data-clave="{{ clave }}">{{ etiqueta }}</button>
-        {% endfor %}
-      </div>
-      <p class="subtitulo" style="margin-top:12px;">
-        ¿Necesitas otro dato (ej. a quién va dirigido)? Solo escríbelo tú mismo como
-        <code>{{ '{{ destinatario_nombre }}' }}</code> directamente en el cuerpo — se detecta solo y
-        se pide como texto libre al generar el documento.
-      </p>
     </div>
   </div>
+</div>
 
-  <script>
-    var LLAVE_ABRE = "{{ '{{' }}";
-    var LLAVE_CIERRA = "{{ '}}' }}";
+<script>
+  var LLAVE_ABRE = "{{ '{{' }}";
+  var LLAVE_CIERRA = "{{ '}}' }}";
+  var MARCA_FOR = "{{ '{%' }}";
+  var MARCA_ENDFOR = "{{ '%}' }}";
 
-    document.querySelectorAll(".chip-variable").forEach(function (boton) {
-      boton.addEventListener("click", function () {
-        var textarea = document.getElementById("cuerpo-texto");
-        var texto = LLAVE_ABRE + " " + boton.dataset.clave + " " + LLAVE_CIERRA;
-        var inicio = textarea.selectionStart;
-        var fin = textarea.selectionEnd;
-        textarea.setRangeText(texto, inicio, fin, "end");
-        textarea.focus();
-      });
-    });
-  </script>
+  function editorDeCuerpo() {
+    return {
+      editandoTitulo: false,
+      busqueda: "",
+      variables: {{ variables_buscables | tojson }},
+      get filtradas() {
+        if (!this.busqueda.trim()) return this.variables;
+        var t = this.busqueda.toLowerCase();
+        return this.variables.filter(function (v) {
+          return v.clave.toLowerCase().indexOf(t) !== -1 || v.etiqueta.toLowerCase().indexOf(t) !== -1;
+        });
+      },
+      get agrupadas() {
+        var grupos = {};
+        this.filtradas.forEach(function (v) {
+          if (!grupos[v.grupo]) grupos[v.grupo] = [];
+          grupos[v.grupo].push(v);
+        });
+        return grupos;
+      },
+      insertar: function (clave) {
+        var texto = LLAVE_ABRE + " " + clave + " " + LLAVE_CIERRA;
+        this._insertarEnCursor(texto);
+      },
+      insertarListaProfesores: function () {
+        var texto = MARCA_FOR + "for p in profesores_lista " + MARCA_ENDFOR + "\n"
+          + LLAVE_ABRE + " p.nombre " + LLAVE_CIERRA + "\n"
+          + MARCA_FOR + "endfor " + MARCA_ENDFOR;
+        this._insertarEnCursor(texto);
+      },
+      _insertarEnCursor: function (texto) {
+        var ta = this.$refs.cuerpo;
+        var inicio = ta.selectionStart;
+        var fin = ta.selectionEnd;
+        ta.setRangeText(texto, inicio, fin, "end");
+        ta.focus();
+      },
+    };
+  }
+</script>
 {% endblock %}
