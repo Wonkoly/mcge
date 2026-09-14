@@ -77,6 +77,10 @@
       <h2>Vigente</h2>
       {% if comite %}
         <p>Ciclo {{ comite.ciclo or "—" }} (desde {{ comite.fecha_inicio or "fecha desconocida" }})</p>
+        <p class="subtitulo" style="margin:0 0 12px;">
+          {% if comite.acta %}Aprobado en el acta <a href="{{ url_for('actas.detalle', acta_id=comite.acta.id) }}">{{ comite.acta.numero }}</a>{% if comite.acta.fecha %} del {{ comite.acta.fecha }}{% endif %}
+          {% else %}<span style="color:var(--amarillo);">⚠ Sin acta vinculada</span>{% endif %}
+        </p>
         <ul class="lista-simple">
           {% for m in comite.miembros %}<li>{{ m.profesor.nombre }}</li>{% endfor %}
         </ul>
@@ -103,10 +107,20 @@
     <div class="panel">
       <h2>Asignar / cambiar comité tutorial</h2>
       <form method="post" action="{{ url_for('alumnos.asignar_comite_route', alumno_id=alumno.id) }}" class="formulario">
-        <div class="campo">
-          <label>Ciclo</label>
-          <input type="text" name="ciclo" value="{{ ciclo_sugerido }}">
+        <div class="fila-campos">
+          <div class="campo">
+            <label>Ciclo</label>
+            <input type="text" name="ciclo" value="{{ ciclo_sugerido }}">
+          </div>
+          <div class="campo">
+            <label>Acta en la que se aprobó</label>
+            <select name="acta_id">
+              <option value="">— Sin acta (agregar después) —</option>
+              {% for a in actas %}<option value="{{ a.id }}">{{ a.numero }}{% if a.fecha %} — {{ a.fecha }}{% endif %}</option>{% endfor %}
+            </select>
+          </div>
         </div>
+        <p class="subtitulo" style="margin:-8px 0 12px;">¿No existe el acta todavía? <a href="{{ url_for('actas.nuevo') }}" target="_blank">Créala aquí</a> y vuelve a esta pantalla para seleccionarla.</p>
         <div class="campo">
           <label>Miembros (2-3 profesores, sin cargo diferenciado)</label>
           <input type="text" id="filtro-profesores-comite" placeholder="Buscar profesor por nombre..." style="margin-bottom:8px;">
@@ -130,13 +144,14 @@
       <h2>Historial</h2>
       {% if historial_comite %}
         <table>
-          <thead><tr><th>Desde</th><th>Estado</th><th>Ciclo</th><th>Miembros</th></tr></thead>
+          <thead><tr><th>Desde</th><th>Estado</th><th>Ciclo</th><th>Acta</th><th>Miembros</th></tr></thead>
           <tbody>
             {% for c in historial_comite %}
               <tr>
                 <td>{{ c.fecha_inicio or "desconocida" }}</td>
                 <td>{{ "Vigente" if c.vigente else "Cerrado " ~ c.fecha_fin }}</td>
                 <td>{{ c.ciclo or "—" }}</td>
+                <td>{% if c.acta %}<a href="{{ url_for('actas.detalle', acta_id=c.acta.id) }}">{{ c.acta.numero }}</a>{% else %}—{% endif %}</td>
                 <td>{{ c.miembros | map(attribute="profesor") | map(attribute="nombre") | join(", ") }}</td>
               </tr>
             {% endfor %}
@@ -151,8 +166,12 @@
   <div id="tab-direccion" class="tab-panel">
     <div class="panel">
       <h2>Vigente</h2>
-      <p>Director: <strong>{{ director.profesor.nombre if director else "—" }}</strong></p>
-      <p>Codirector: <strong>{{ codirector.profesor.nombre if codirector else "—" }}</strong></p>
+      <p>Director: <strong>{{ director.profesor.nombre if director else "—" }}</strong>
+        {% if director %}{% if director.acta %} — acta <a href="{{ url_for('actas.detalle', acta_id=director.acta.id) }}">{{ director.acta.numero }}</a>{% if director.acta.fecha %} del {{ director.acta.fecha }}{% endif %}{% else %}<span style="color:var(--amarillo);"> ⚠ Sin acta vinculada</span>{% endif %}{% endif %}
+      </p>
+      <p>Codirector: <strong>{{ codirector.profesor.nombre if codirector else "—" }}</strong>
+        {% if codirector %}{% if codirector.acta %} — acta <a href="{{ url_for('actas.detalle', acta_id=codirector.acta.id) }}">{{ codirector.acta.numero }}</a>{% if codirector.acta.fecha %} del {{ codirector.acta.fecha }}{% endif %}{% else %}<span style="color:var(--amarillo);"> ⚠ Sin acta vinculada</span>{% endif %}{% endif %}
+      </p>
     </div>
 
     {% if director or codirector %}
@@ -207,6 +226,14 @@
             </select>
           </div>
         </div>
+        <div class="campo">
+          <label>Acta en la que se aprobó</label>
+          <select name="acta_id">
+            <option value="">— Sin acta (agregar después) —</option>
+            {% for a in actas %}<option value="{{ a.id }}">{{ a.numero }}{% if a.fecha %} — {{ a.fecha }}{% endif %}</option>{% endfor %}
+          </select>
+        </div>
+        <p class="subtitulo" style="margin:-8px 0 4px;">¿No existe el acta todavía? <a href="{{ url_for('actas.nuevo') }}" target="_blank">Créala aquí</a> y vuelve a esta pantalla para seleccionarla.</p>
         <div class="acciones-form">
           <button class="btn" type="submit">Guardar</button>
         </div>
@@ -217,7 +244,7 @@
       <h2>Historial</h2>
       {% if historial_direccion %}
         <table>
-          <thead><tr><th>Desde</th><th>Estado</th><th>Rol</th><th>Profesor</th></tr></thead>
+          <thead><tr><th>Desde</th><th>Estado</th><th>Rol</th><th>Profesor</th><th>Acta</th></tr></thead>
           <tbody>
             {% for d in historial_direccion %}
               <tr>
@@ -225,6 +252,7 @@
                 <td>{{ "Vigente" if d.vigente else "Cerrado " ~ d.fecha_fin }}</td>
                 <td>{{ d.rol }}</td>
                 <td>{{ d.profesor.nombre }}</td>
+                <td>{% if d.acta %}<a href="{{ url_for('actas.detalle', acta_id=d.acta.id) }}">{{ d.acta.numero }}</a>{% else %}—{% endif %}</td>
               </tr>
             {% endfor %}
           </tbody>

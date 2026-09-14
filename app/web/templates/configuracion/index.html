@@ -23,6 +23,32 @@
   </div>
 
   <div class="panel">
+    <h2>Folios de oficios y constancias</h2>
+    <p class="subtitulo">Cada tipo de documento lleva su propio contador, por año. El "Siguiente" es el número que se usará la próxima vez que se genere ese documento. Ajusta "Último usado" si vienes de un control manual (papel/Excel) y necesitas seguir la numeración desde donde se quedó.</p>
+    <table>
+      <thead><tr><th>Documento</th><th>Año</th><th>Último usado</th><th>Siguiente</th><th></th></tr></thead>
+      <tbody>
+        {% for f in folios %}
+          <tr>
+            <td>{{ tipos_documento.get(f.tipo_documento, f.tipo_documento) }}</td>
+            <td>{{ f.anio }}</td>
+            <td>{{ f.ultimo_folio }}</td>
+            <td>{{ f.ultimo_folio + 1 }}</td>
+            <td>
+              <form method="post" action="{{ url_for('configuracion.establecer_folio_route') }}" style="display:flex; gap:6px; align-items:center;">
+                <input type="hidden" name="tipo_documento" value="{{ f.tipo_documento }}">
+                <input type="hidden" name="anio" value="{{ f.anio }}">
+                <input type="number" name="ultimo_folio" value="{{ f.ultimo_folio }}" min="0" style="width:80px;">
+                <button class="btn btn-pequeno btn-secundario" type="submit">Ajustar</button>
+              </form>
+            </td>
+          </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+
+  <div class="panel">
     <h2>Respaldos</h2>
     <form method="post" class="formulario">
       <div class="fila-campos">

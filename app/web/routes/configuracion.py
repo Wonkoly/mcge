@@ -3,6 +3,7 @@ from datetime import datetime
 from flask import Blueprint, flash, redirect, render_template, request, url_for
 
 from app.services.configuracion_service import CLAVES_DEFAULT, establecer, obtener_todas
+from app.services.folio_service import TIPOS_DOCUMENTO, establecer_folio, listar_folios
 from app.utils.backup import crear_respaldo, listar_respaldos, restaurar_respaldo
 from app.web.db import get_session
 
@@ -24,7 +25,33 @@ def index():
         {"nombre": p.name, "tamano_kb": round(p.stat().st_size / 1024), "fecha": datetime.fromtimestamp(p.stat().st_mtime)}
         for p in listar_respaldos()
     ]
-    return render_template("configuracion/index.html", config=obtener_todas(session), respaldos=respaldos)
+    return render_template(
+        "configuracion/index.html",
+        config=obtener_todas(session),
+        respaldos=respaldos,
+        folios=listar_folios(session),
+        tipos_documento=TIPOS_DOCUMENTO,
+    )
+
+
+@bp.route("/folio", methods=["POST"])
+def establecer_folio_route():
+    session = get_session()
+    tipo_documento = request.form.get("tipo_documento", "")
+    anio = request.form.get("anio", type=int)
+    ultimo_folio = request.form.get("ultimo_folio", type=int)
+    if tipo_documento not in TIPOS_DOCUMENTO or anio is None or ultimo_folio is None:
+        flash("Datos inválidos para el folio.", "error")
+        return redirect(url_for("configuracion.index"))
+
+    establecer_folio(session, tipo_documento, anio, ultimo_folio)
+    session.commit()
+    flash(
+        f"Folio de \"{TIPOS_DOCUMENTO[tipo_documento]}\" ({anio}) actualizado — "
+        f"el siguiente que se genere será el número {ultimo_folio + 1}.",
+        "exito",
+    )
+    return redirect(url_for("configuracion.index"))
 
 
 @bp.route("/respaldo/generar", methods=["POST"])

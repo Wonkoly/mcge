@@ -3,6 +3,7 @@ from urllib.parse import urlencode
 from flask import Blueprint, flash, redirect, render_template, request, url_for
 
 from app.models import Lector, Sinodal
+from app.repositories.acta_repository import listar_actas
 from app.repositories.alumno_repository import (
     buscar_alumnos_filtrado,
     obtener_alumno,
@@ -130,6 +131,7 @@ def detalle(alumno_id):
         ciclo_sugerido=ciclo_escolar_vigente(session),
         lectores=lectores_de_alumno(session, alumno_id),
         sinodales=sinodales_de_alumno(session, alumno_id),
+        actas=listar_actas(session),
     )
 
 
@@ -138,11 +140,12 @@ def asignar_direccion_route(alumno_id):
     session = get_session()
     rol = request.form.get("rol")
     profesor_id = request.form.get("profesor_id", type=int)
+    acta_id = request.form.get("acta_id", type=int)
     if not rol or not profesor_id:
         flash("Selecciona rol y profesor.", "error")
         return redirect(url_for("alumnos.detalle", alumno_id=alumno_id))
 
-    _, aviso = asignar_direccion(session, alumno_id=alumno_id, profesor_id=profesor_id, rol=rol)
+    _, aviso = asignar_direccion(session, alumno_id=alumno_id, profesor_id=profesor_id, rol=rol, acta_id=acta_id)
     session.commit()
     flash(f"{rol} asignado.", "exito")
     if aviso:
@@ -155,11 +158,12 @@ def asignar_comite_route(alumno_id):
     session = get_session()
     profesor_ids = [int(pid) for pid in request.form.getlist("profesor_ids")]
     ciclo = request.form.get("ciclo") or ciclo_escolar_vigente(session)
+    acta_id = request.form.get("acta_id", type=int)
     if not profesor_ids:
         flash("Selecciona al menos un profesor para el comité tutorial.", "error")
         return redirect(url_for("alumnos.detalle", alumno_id=alumno_id))
 
-    asignar_comite_tutorial(session, alumno_id=alumno_id, profesor_ids=profesor_ids, ciclo=ciclo)
+    asignar_comite_tutorial(session, alumno_id=alumno_id, profesor_ids=profesor_ids, ciclo=ciclo, acta_id=acta_id)
     session.commit()
     flash("Comité tutorial actualizado.", "exito")
     return redirect(url_for("alumnos.detalle", alumno_id=alumno_id))
