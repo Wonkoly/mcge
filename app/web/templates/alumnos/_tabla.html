@@ -1,3 +1,4 @@
+{% import "macros/ui.html" as ui %}
 <p class="subtitulo" id="alumnos-contador">{{ alumnos|length }} resultado(s)</p>
 {% set prefijo_qs = filtros_qs + "&" if filtros_qs else "" %}
 <div class="panel">
@@ -8,10 +9,16 @@
         <th><a href="?{{ prefijo_qs }}orden={{ 'nombre' if filtros.orden != 'nombre' else '-nombre' }}"
                hx-get="{{ url_for('alumnos.listar') }}?{{ prefijo_qs }}orden={{ 'nombre' if filtros.orden != 'nombre' else '-nombre' }}"
                hx-target="#alumnos-resultado" hx-push-url="true">Nombre {{ "▲" if filtros.orden == "nombre" else "▼" if filtros.orden == "-nombre" else "" }}</a></th>
-        <th><a href="?{{ prefijo_qs }}orden={{ 'ciclo_ingreso' if filtros.orden != 'ciclo_ingreso' else '-ciclo_ingreso' }}"
-               hx-get="{{ url_for('alumnos.listar') }}?{{ prefijo_qs }}orden={{ 'ciclo_ingreso' if filtros.orden != 'ciclo_ingreso' else '-ciclo_ingreso' }}"
-               hx-target="#alumnos-resultado" hx-push-url="true">Ciclo {{ "▲" if filtros.orden == "ciclo_ingreso" else "▼" if filtros.orden == "-ciclo_ingreso" else "" }}</a></th>
-        <th>Status</th>
+        <th>
+          <a href="?{{ prefijo_qs }}orden={{ 'ciclo_ingreso' if filtros.orden != 'ciclo_ingreso' else '-ciclo_ingreso' }}"
+             hx-get="{{ url_for('alumnos.listar') }}?{{ prefijo_qs }}orden={{ 'ciclo_ingreso' if filtros.orden != 'ciclo_ingreso' else '-ciclo_ingreso' }}"
+             hx-target="#alumnos-resultado" hx-push-url="true">Ciclo {{ "▲" if filtros.orden == "ciclo_ingreso" else "▼" if filtros.orden == "-ciclo_ingreso" else "" }}</a>
+          {{ ui.filtro_columna("ciclo_ingreso", "", ciclo_opciones, filtros.ciclo_ingreso, incluir_buscador=true) }}
+        </th>
+        <th>
+          Status
+          {{ ui.filtro_columna("status_codigo", "", status_opciones, filtros.status_codigo) }}
+        </th>
         <th><a href="?{{ prefijo_qs }}orden={{ 'creditos_acumulados' if filtros.orden != 'creditos_acumulados' else '-creditos_acumulados' }}"
                hx-get="{{ url_for('alumnos.listar') }}?{{ prefijo_qs }}orden={{ 'creditos_acumulados' if filtros.orden != 'creditos_acumulados' else '-creditos_acumulados' }}"
                hx-target="#alumnos-resultado" hx-push-url="true">Créditos {{ "▲" if filtros.orden == "creditos_acumulados" else "▼" if filtros.orden == "-creditos_acumulados" else "" }}</a></th>

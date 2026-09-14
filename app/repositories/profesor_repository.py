@@ -43,16 +43,23 @@ def buscar_profesores_filtrado(
     session: Session,
     *,
     texto: str = "",
-    tratamiento: str = "",
-    sni: str = "",
-    dedicacion: str = "",
-    lies_id: str = "",
-    nucleo: str = "",  # "si" | "no" | ""
+    tratamiento: list[str] | None = None,
+    sni: list[str] | None = None,
+    dedicacion: list[str] | None = None,
+    lies_id: list[str] | None = None,
+    nucleo: list[str] | None = None,  # valores "si" | "no"
     orden: str = "nombre",
 ):
     """Devuelve lista de tuplas (Profesor, num_alumnos_vigentes). Todos los
-    filtros son combinables entre sí (se aplican con AND). `orden` controla
-    tanto la columna como la dirección (prefijo "-" = descendente)."""
+    campos son combinables entre sí (AND); dentro de un mismo campo, varios
+    valores marcados se combinan con OR (autofiltro estilo Excel) usando
+    `IN`. `orden` controla columna y dirección (prefijo "-" = descendente)."""
+    tratamiento = [v for v in (tratamiento or []) if v]
+    sni = [v for v in (sni or []) if v]
+    dedicacion = [v for v in (dedicacion or []) if v]
+    lies_id = [int(v) for v in (lies_id or []) if v]
+    nucleo = [v for v in (nucleo or []) if v]
+
     conteo = (
         session.query(Direccion.profesor_id, func.count(Direccion.id).label("num_alumnos"))
         .filter(Direccion.fecha_fin.is_(None))
@@ -68,17 +75,15 @@ def buscar_profesores_filtrado(
         patron = f"%{texto}%"
         query = query.filter(or_(Profesor.nombre.ilike(patron), Profesor.linea_investigacion.ilike(patron)))
     if tratamiento:
-        query = query.filter(Profesor.tratamiento == tratamiento)
+        query = query.filter(Profesor.tratamiento.in_(tratamiento))
     if sni:
-        query = query.filter(Profesor.sni == sni)
+        query = query.filter(Profesor.sni.in_(sni))
     if dedicacion:
-        query = query.filter(Profesor.dedicacion.ilike(f"%{dedicacion}%"))
+        query = query.filter(Profesor.dedicacion.in_(dedicacion))
     if lies_id:
-        query = query.filter(Profesor.lies_id == int(lies_id))
-    if nucleo == "si":
-        query = query.filter(Profesor.nucleo_academico.is_(True))
-    elif nucleo == "no":
-        query = query.filter(Profesor.nucleo_academico.is_(False))
+        query = query.filter(Profesor.lies_id.in_(lies_id))
+    if nucleo:
+        query = query.filter(Profesor.nucleo_academico.in_([v == "si" for v in nucleo]))
 
     columna, descendente = ORDENES_VALIDOS.get(orden, ORDENES_VALIDOS["nombre"])
     if orden.lstrip("-") == "num_alumnos":

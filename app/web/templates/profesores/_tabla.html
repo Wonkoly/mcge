@@ -1,3 +1,4 @@
+{% import "macros/ui.html" as ui %}
 <p class="subtitulo" id="profesores-contador">{{ resultados|length }} resultado(s)</p>
 <div class="panel">
   <table>
@@ -7,8 +8,14 @@
         <th><a href="?{{ prefijo_qs }}orden={{ 'nombre' if filtros.orden != 'nombre' else '-nombre' }}"
                hx-get="{{ url_for('profesores.listar') }}?{{ prefijo_qs }}orden={{ 'nombre' if filtros.orden != 'nombre' else '-nombre' }}"
                hx-target="#profesores-resultado" hx-push-url="true">Nombre {{ "▲" if filtros.orden == "nombre" else "▼" if filtros.orden == "-nombre" else "" }}</a></th>
-        <th>Tratamiento</th>
-        <th>Núcleo académico</th>
+        <th>
+          Tratamiento
+          {{ ui.filtro_columna("tratamiento", "", tratamiento_opciones, filtros.tratamiento) }}
+        </th>
+        <th>
+          Núcleo académico
+          {{ ui.filtro_columna("nucleo", "", nucleo_opciones, filtros.nucleo) }}
+        </th>
         <th>Línea de investigación</th>
         <th><a href="?{{ prefijo_qs }}orden={{ 'num_alumnos' if filtros.orden != 'num_alumnos' else '-num_alumnos' }}"
                hx-get="{{ url_for('profesores.listar') }}?{{ prefijo_qs }}orden={{ 'num_alumnos' if filtros.orden != 'num_alumnos' else '-num_alumnos' }}"

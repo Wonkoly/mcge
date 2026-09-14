@@ -26,11 +26,11 @@ bp = Blueprint("profesores", __name__, url_prefix="/profesores")
 def _filtros_desde_form():
     return dict(
         texto=request.args.get("q", ""),
-        tratamiento=request.args.get("tratamiento", ""),
-        sni=request.args.get("sni", ""),
-        dedicacion=request.args.get("dedicacion", ""),
-        lies_id=request.args.get("lies_id", ""),
-        nucleo=request.args.get("nucleo", ""),
+        tratamiento=request.args.getlist("tratamiento"),
+        sni=request.args.getlist("sni"),
+        dedicacion=request.args.getlist("dedicacion"),
+        lies_id=request.args.getlist("lies_id"),
+        nucleo=request.args.getlist("nucleo"),
         orden=request.args.get("orden", "nombre"),
     )
 
@@ -45,8 +45,10 @@ def listar():
     contexto = dict(
         resultados=resultados,
         filtros=filtros,
-        filtros_qs=urlencode(filtros_sin_orden),
+        filtros_qs=urlencode(filtros_sin_orden, doseq=True),
         tratamientos=TRATAMIENTOS,
+        tratamiento_opciones=[(t, t) for t in TRATAMIENTOS],
+        nucleo_opciones=[("si", "Sí (núcleo)"), ("no", "Externo")],
         sni_opciones=valores_distintos_sni(session),
         dedicacion_opciones=valores_distintos_dedicacion(session),
         lies_opciones=listar_lies(session),

@@ -85,6 +85,27 @@
   </dialog>
 {% endmacro %}
 
+{% macro filtro_columna(campo, etiqueta, opciones, activos, incluir_buscador=false) %}
+  {# Autofiltro estilo Excel para un encabezado de tabla: `opciones` es una
+     lista de (valor, texto); `activos` es la lista de valores ya
+     marcados (de `filtros`). Los checkboxes comparten `name` con el
+     campo del backend — deben vivir dentro del <form> de filtros para
+     que HTMX los incluya en la petición al cambiar. #}
+  {% set hay_activos = activos and activos|length > 0 %}
+  <details class="filtro-columna {{ 'filtro-activo' if hay_activos else '' }}">
+    <summary>{{ etiqueta }} <span class="icono-filtro">▾{{ "●" if hay_activos else "" }}</span></summary>
+    <div class="filtro-panel">
+      {% if incluir_buscador %}<input type="text" class="filtro-panel-buscar" placeholder="Buscar...">{% endif %}
+      {% for valor, texto in opciones %}
+        <label data-nombre="{{ texto|lower }}">
+          <input type="checkbox" name="{{ campo }}" value="{{ valor }}" {{ "checked" if valor in activos else "" }}>
+          {{ texto }}
+        </label>
+      {% endfor %}
+    </div>
+  </details>
+{% endmacro %}
+
 {% macro paginador(pagina_actual, total_paginas, url_base) %}
   {% if total_paginas > 1 %}
     <nav class="flex items-center justify-center gap-1 py-4">

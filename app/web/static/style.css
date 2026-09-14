@@ -247,6 +247,33 @@ a.tarjeta:hover { border-color: var(--azul-acento); box-shadow: 0 1px 6px rgba(5
 .semestre-bloque.semestre-excedido .semestre-valor { color: var(--rojo); }
 .semestre-bloque .semestre-etiqueta { font-size: 11px; color: var(--texto-suave); margin-top: 4px; text-transform: uppercase; letter-spacing: 0.03em; }
 
+/* --- Filtro estilo Excel en encabezados de tabla --- */
+th .filtro-columna { position: relative; display: inline-block; }
+th .filtro-columna summary {
+  cursor: pointer; list-style: none; display: inline-flex; align-items: center; gap: 4px;
+  color: inherit;
+}
+th .filtro-columna summary::-webkit-details-marker { display: none; }
+th .filtro-columna .icono-filtro { font-size: 10px; color: var(--texto-suave); }
+th .filtro-columna.filtro-activo summary,
+th .filtro-columna.filtro-activo .icono-filtro { color: var(--azul-acento); }
+.filtro-panel {
+  position: absolute; top: 100%; left: 0; z-index: 20; margin-top: 6px;
+  background: var(--blanco); border: 1px solid var(--gris-borde); border-radius: 8px;
+  box-shadow: 0 4px 16px rgba(0,0,0,0.14); padding: 10px; min-width: 220px;
+  max-height: 280px; overflow-y: auto;
+  font-weight: normal; text-transform: none; letter-spacing: normal; font-size: 13px;
+}
+.filtro-panel input[type="text"] { margin-bottom: 8px; padding: 6px 8px; font-size: 13px; }
+.filtro-panel label {
+  display: flex; align-items: center; gap: 6px; padding: 4px 2px;
+  font-weight: normal; font-size: 13px; cursor: pointer; white-space: nowrap;
+}
+.filtro-panel label input[type="checkbox"] { width: auto; margin: 0; }
+.mas-filtros { margin-bottom: 16px; }
+.mas-filtros summary { cursor: pointer; font-size: 13px; color: var(--texto-suave); font-weight: 600; }
+.mas-filtros .mas-filtros-contenido { display: flex; gap: 10px; flex-wrap: wrap; margin-top: 10px; }
+
 .tabs { display: flex; gap: 4px; border-bottom: 1px solid var(--gris-borde); margin-bottom: 20px; }
 .tab-boton {
   padding: 10px 18px; font-size: 14px; font-weight: 600; color: var(--texto-suave);

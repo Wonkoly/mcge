@@ -8,44 +8,39 @@
     <a href="{{ url_for('profesores.nuevo') }}" class="btn">+ Agregar profesor</a>
   </div>
 
-  <form class="barra-busqueda fila-campos" method="get"
+  <form method="get"
         hx-get="{{ url_for('profesores.listar') }}"
         hx-target="#profesores-resultado"
-        hx-trigger="keyup changed delay:300ms, change"
+        hx-trigger="keyup changed delay:300ms from:.buscador-texto, change"
         hx-push-url="true">
-    <input type="text" name="q" value="{{ filtros.texto }}" placeholder="Buscar por nombre o línea de investigación...">
+    <div class="barra-busqueda">
+      <input type="text" name="q" class="buscador-texto" value="{{ filtros.texto }}" placeholder="Buscar por nombre o línea de investigación...">
+    </div>
 
-    <select name="tratamiento">
-      <option value="">— Tratamiento (todos)</option>
-      {% for t in tratamientos %}<option value="{{ t }}" {{ "selected" if filtros.tratamiento == t else "" }}>{{ t }}</option>{% endfor %}
-    </select>
+    <details class="mas-filtros">
+      <summary>Más filtros (SNI, Dedicación, LIES)</summary>
+      <div class="mas-filtros-contenido">
+        <select name="sni">
+          <option value="">— SNI (todos) —</option>
+          {% for v in sni_opciones %}<option value="{{ v }}" {{ "selected" if v in filtros.sni else "" }}>{{ v }}</option>{% endfor %}
+        </select>
 
-    <select name="sni">
-      <option value="">— SNI (todos)</option>
-      {% for v in sni_opciones %}<option value="{{ v }}" {{ "selected" if filtros.sni == v else "" }}>{{ v }}</option>{% endfor %}
-    </select>
+        <select name="dedicacion">
+          <option value="">— Dedicación (todas) —</option>
+          {% for v in dedicacion_opciones %}<option value="{{ v }}" {{ "selected" if v in filtros.dedicacion else "" }}>{{ v }}</option>{% endfor %}
+        </select>
 
-    <select name="dedicacion">
-      <option value="">— Dedicación (todas)</option>
-      {% for v in dedicacion_opciones %}<option value="{{ v }}" {{ "selected" if filtros.dedicacion == v else "" }}>{{ v }}</option>{% endfor %}
-    </select>
-
-    <select name="lies_id">
-      <option value="">— LIES (todas)</option>
-      {% for l in lies_opciones %}<option value="{{ l.id }}" {{ "selected" if filtros.lies_id == l.id|string else "" }}>{{ l.nombre }}</option>{% endfor %}
-    </select>
-
-    <select name="nucleo">
-      <option value="">— Núcleo académico (todos)</option>
-      <option value="si" {{ "selected" if filtros.nucleo == "si" else "" }}>Sólo núcleo</option>
-      <option value="no" {{ "selected" if filtros.nucleo == "no" else "" }}>Sólo externos</option>
-    </select>
+        <select name="lies_id">
+          <option value="">— LIES (todas) —</option>
+          {% for l in lies_opciones %}<option value="{{ l.id }}" {{ "selected" if l.id|string in filtros.lies_id else "" }}>{{ l.nombre }}</option>{% endfor %}
+        </select>
+      </div>
+    </details>
 
     <input type="hidden" name="orden" value="{{ filtros.orden }}">
-    <button class="btn btn-secundario" type="submit">Buscar</button>
-  </form>
 
-  <div id="profesores-resultado">
-    {% include "profesores/_tabla.html" %}
-  </div>
+    <div id="profesores-resultado">
+      {% include "profesores/_tabla.html" %}
+    </div>
+  </form>
 {% endblock %}

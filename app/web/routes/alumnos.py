@@ -26,12 +26,12 @@ bp = Blueprint("alumnos", __name__, url_prefix="/alumnos")
 def _filtros_desde_form():
     return dict(
         texto=request.args.get("q", ""),
-        ciclo_ingreso=request.args.get("ciclo_ingreso", ""),
-        status_codigo=request.args.get("status_codigo", ""),
-        categoria=request.args.get("categoria", ""),
-        lies_id=request.args.get("lies_id", ""),
-        director_id=request.args.get("director_id", ""),
-        dictamen=request.args.get("dictamen", ""),
+        ciclo_ingreso=request.args.getlist("ciclo_ingreso"),
+        status_codigo=request.args.getlist("status_codigo"),
+        categoria=request.args.getlist("categoria"),
+        lies_id=request.args.getlist("lies_id"),
+        director_id=request.args.getlist("director_id"),
+        dictamen=request.args.getlist("dictamen"),
         creditos_min=request.args.get("creditos_min", ""),
         creditos_max=request.args.get("creditos_max", ""),
         orden=request.args.get("orden", "nombre"),
@@ -48,11 +48,12 @@ def listar():
     contexto = dict(
         alumnos=alumnos,
         filtros=filtros,
-        filtros_qs=urlencode(filtros_sin_orden),
+        filtros_qs=urlencode(filtros_sin_orden, doseq=True),
         status_list=listar_status(session),
+        status_opciones=[(s.codigo, s.nombre) for s in listar_status(session)],
         lies_list=listar_lies(session),
         directores=listar_profesores(session),
-        ciclo_opciones=valores_distintos_ciclo_ingreso(session),
+        ciclo_opciones=[(c, c) for c in valores_distintos_ciclo_ingreso(session)],
         dictamen_opciones=valores_distintos_dictamen(session),
     )
     if request.headers.get("HX-Request"):

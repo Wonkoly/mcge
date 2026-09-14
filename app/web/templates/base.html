@@ -43,5 +43,21 @@
       {% block contenido %}{% endblock %}
     </main>
   </div>
+
+  <script>
+    document.addEventListener("click", function (evento) {
+      document.querySelectorAll("details.filtro-columna[open]").forEach(function (detalle) {
+        if (!detalle.contains(evento.target)) detalle.removeAttribute("open");
+      });
+    });
+
+    document.addEventListener("input", function (evento) {
+      if (!evento.target.classList.contains("filtro-panel-buscar")) return;
+      var texto = evento.target.value.trim().toLowerCase();
+      evento.target.closest(".filtro-panel").querySelectorAll("label[data-nombre]").forEach(function (etiqueta) {
+        etiqueta.style.display = etiqueta.dataset.nombre.indexOf(texto) !== -1 ? "" : "none";
+      });
+    });
+  </script>
 </body>
 </html>
