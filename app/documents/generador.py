@@ -18,6 +18,8 @@ from io import BytesIO
 from docxtpl import DocxTemplate
 from sqlalchemy.orm import Session
 
+from app.models.profesor import PREFIJO_POR_TRATAMIENTO
+
 from app.services.folio_service import siguiente_folio_formateado
 from app.utils.rutas import directorio_recursos
 
@@ -63,17 +65,33 @@ def formatear_nombre(nombre: str) -> str:
     return " ".join(resultado)
 
 
-def es_femenino(grado: str | None) -> bool:
-    """Heurística simple a partir del campo `grado` ('Doctora en...',
-    'Maestra en...'). El generador siempre deja el documento como borrador
-    editable — si se equivoca, se corrige a mano antes de imprimir."""
+def es_femenino_texto(grado: str | None) -> bool:
+    """Heurística de respaldo a partir de texto libre — solo se usa si el
+    profesor no tiene `tratamiento` capturado (catálogo cerrado, Módulo
+    3.2). El generador siempre deja el documento como borrador editable —
+    si se equivoca, se corrige a mano antes de imprimir."""
     return bool(grado) and ("doctora" in grado.lower() or "maestra" in grado.lower())
 
 
-def tratamiento_con_nombre(grado: str | None, nombre: str) -> str:
+def es_femenino(profesor) -> bool:
+    if profesor.tratamiento:
+        return profesor.tratamiento in ("Doctora", "Maestra")
+    return es_femenino_texto(profesor.grado)
+
+
+def tratamiento_con_nombre(profesor, nombre: str) -> str:
     """'el Dr. Fulano' / 'la Dra. Fulana' / solo 'Fulano' si no se conoce
-    el grado — evita el "el/la" literal cuando no hay dato."""
-    femenino = es_femenino(grado)
+    el tratamiento — evita el "el/la" literal cuando no hay dato. Usa el
+    campo `tratamiento` (catálogo cerrado) si existe; si no, cae en la
+    heurística vieja sobre el texto libre de `grado` (profesores
+    importados antes del catálogo)."""
+    if profesor.tratamiento:
+        prefijo = PREFIJO_POR_TRATAMIENTO.get(profesor.tratamiento, "")
+        articulo = "la" if es_femenino(profesor) else "el"
+        return f"{articulo} {prefijo} {nombre}" if prefijo else nombre
+
+    grado = profesor.grado
+    femenino = es_femenino_texto(grado)
     if grado and "doctor" in grado.lower():
         return f"{'la Dra.' if femenino else 'el Dr.'} {nombre}"
     if grado and ("maestro" in grado.lower() or "maestra" in grado.lower() or "m.c" in grado.lower() or "m. en c" in grado.lower()):
@@ -90,7 +108,7 @@ def _a_contraido(nombre_con_tratamiento: str) -> str:
 
 
 def _nombre_con_tratamiento(profesor) -> str:
-    return tratamiento_con_nombre(profesor.grado, formatear_nombre(profesor.nombre))
+    return tratamiento_con_nombre(profesor, formatear_nombre(profesor.nombre))
 
 
 def _acta_referencia(acta) -> str:
@@ -111,7 +129,7 @@ def _render(nombre_plantilla: str, contexto: dict) -> BytesIO:
 
 
 def _campos_rol(direccion):
-    femenino = es_femenino(direccion.profesor.grado)
+    femenino = es_femenino(direccion.profesor)
     if direccion.rol == "Director":
         rol_texto_largo = "Directora" if femenino else "Director"
         rol_corto = "directora" if femenino else "director"

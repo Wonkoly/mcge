@@ -6,13 +6,24 @@ from sqlalchemy.orm import Mapped, mapped_column, relationship
 from app.models.base import Base, TimestampMixin
 from app.models.catalogos import Lies
 
+TRATAMIENTOS = ["Doctor", "Doctora", "Maestro", "Maestra"]
+
+PREFIJO_POR_TRATAMIENTO = {
+    "Doctor": "Dr.",
+    "Doctora": "Dra.",
+    "Maestro": "Mtro.",
+    "Maestra": "Mtra.",
+}
+
 
 class Profesor(Base, TimestampMixin):
     __tablename__ = "profesor"
 
     id: Mapped[int] = mapped_column(primary_key=True)
     nombre: Mapped[str] = mapped_column(String(150), unique=True)
-    grado: Mapped[Optional[str]] = mapped_column(String(150))
+    tratamiento: Mapped[Optional[str]] = mapped_column(String(10))  # catálogo cerrado: TRATAMIENTOS — para el prefijo en documentos
+    grado: Mapped[Optional[str]] = mapped_column(String(150))  # disciplina/grado en texto libre, informativo — NO entra a los documentos
+    centro_universitario: Mapped[Optional[str]] = mapped_column(String(150), default="Centro Universitario de la Costa")
     cvu: Mapped[Optional[str]] = mapped_column(String(20))
     correo: Mapped[Optional[str]] = mapped_column(String(150))
     telefono: Mapped[Optional[str]] = mapped_column(String(30))
@@ -25,6 +36,10 @@ class Profesor(Base, TimestampMixin):
     observaciones: Mapped[Optional[str]] = mapped_column(String(500))
 
     lies: Mapped[Optional["Lies"]] = relationship()
+
+    @property
+    def prefijo(self) -> str:
+        return PREFIJO_POR_TRATAMIENTO.get(self.tratamiento or "", "")
 
 
 class ProfesorAlias(Base):

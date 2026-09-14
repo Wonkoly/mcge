@@ -12,13 +12,21 @@
 
     <div class="fila-campos">
       <div class="campo">
-        <label>Grado académico</label>
-        <input type="text" name="grado" value="{{ profesor.grado or '' }}">
+        <label>Tratamiento</label>
+        <select name="tratamiento">
+          <option value="">— (sin tratamiento)</option>
+          {% for t in tratamientos %}<option value="{{ t }}" {{ "selected" if profesor.tratamiento == t else "" }}>{{ t }}</option>{% endfor %}
+        </select>
       </div>
       <div class="campo">
         <label>CVU</label>
         <input type="text" name="cvu" value="{{ profesor.cvu or '' }}">
       </div>
+    </div>
+
+    <div class="campo">
+      <label>Disciplina / grado (informativo — no aparece en oficios/constancias)</label>
+      <input type="text" name="grado" value="{{ profesor.grado or '' }}">
     </div>
 
     <div class="fila-campos">
@@ -30,6 +38,11 @@
         <label>Teléfono</label>
         <input type="text" name="telefono" value="{{ profesor.telefono or '' }}">
       </div>
+    </div>
+
+    <div class="campo">
+      <label>Centro universitario</label>
+      <input type="text" name="centro_universitario" value="{{ profesor.centro_universitario or 'Centro Universitario de la Costa' }}">
     </div>
 
     <div class="campo">

@@ -163,6 +163,90 @@ input:focus, select:focus, textarea:focus { outline: none; border-color: var(--a
 .expediente-cabecera .nombre { font-size: 20px; font-weight: 700; }
 .expediente-cabecera .meta { color: var(--texto-suave); font-size: 13px; margin-top: 2px; }
 
+/* --- Tarjeta de encabezado (expediente de alumno / perfil de profesor) --- */
+.tarjeta-encabezado {
+  background: var(--blanco);
+  border: 1px solid var(--gris-borde);
+  border-radius: var(--radio);
+  padding: 20px 24px;
+  margin-bottom: 24px;
+}
+.tarjeta-encabezado .fila-superior {
+  display: flex; justify-content: space-between; align-items: flex-start; gap: 16px;
+}
+.tarjeta-encabezado .nombre { font-size: 20px; font-weight: 700; }
+.destacados { display: flex; gap: 32px; flex-wrap: wrap; margin-top: 16px; }
+.destacado .etiqueta {
+  font-size: 11px; text-transform: uppercase; letter-spacing: 0.04em;
+  color: var(--texto-suave); margin-bottom: 4px;
+}
+.destacado .valor { font-size: 19px; font-weight: 700; color: var(--azul-marino); }
+.destacado .valor.alerta { color: var(--rojo); }
+
+.barra-progreso-bloque { margin-top: 18px; }
+.barra-progreso-etiqueta {
+  display: flex; justify-content: space-between; font-size: 12px;
+  color: var(--texto-suave); margin-bottom: 5px;
+}
+.barra-progreso {
+  height: 8px; border-radius: 999px; background: var(--gris-fondo);
+  border: 1px solid var(--gris-borde); overflow: hidden;
+}
+.barra-progreso-relleno { height: 100%; background: var(--azul-acento); border-radius: 999px; }
+
+/* --- Buscador rápido dentro de listas del perfil (Módulo 3.4) --- */
+.filtro-lista { max-width: 320px; margin-bottom: 16px; }
+.subtitulo-seccion {
+  font-size: 13px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.03em;
+  color: var(--texto-suave); margin: 20px 0 10px;
+}
+.subtitulo-seccion:first-of-type { margin-top: 0; }
+.fila-lista-filtrable { padding-bottom: 16px; margin-bottom: 16px; border-bottom: 1px solid var(--gris-borde); }
+.fila-lista-filtrable:last-child { border-bottom: none; margin-bottom: 0; padding-bottom: 0; }
+div.fila-historico { padding: 8px 0; margin-bottom: 0; font-size: 14px; color: var(--texto-suave); }
+
+/* --- Panel: tarjetas navegables, alertas (Módulo 1) --- */
+a.tarjeta { text-decoration: none; color: inherit; display: block; transition: border-color .15s, box-shadow .15s; }
+a.tarjeta:hover { border-color: var(--azul-acento); box-shadow: 0 1px 6px rgba(59,110,246,0.12); }
+
+.alertas-seccion { margin-bottom: 28px; }
+.alertas-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(320px, 1fr)); gap: 16px; }
+.alerta-bloque {
+  background: var(--blanco);
+  border: 1px solid var(--gris-borde);
+  border-left: 4px solid var(--amarillo);
+  border-radius: var(--radio);
+  padding: 16px 20px;
+}
+.alerta-bloque.alerta-grave { border-left-color: var(--rojo); }
+.alerta-bloque .alerta-titulo { font-size: 13px; font-weight: 700; color: var(--texto); margin-bottom: 2px; }
+.alerta-bloque .alerta-conteo { font-size: 12px; color: var(--texto-suave); margin-bottom: 10px; }
+.alerta-bloque ul { list-style: none; margin: 0; padding: 0; max-height: 180px; overflow-y: auto; }
+.alerta-bloque li { padding: 5px 0; border-bottom: 1px solid var(--gris-fondo); font-size: 13px; }
+.alerta-bloque li:last-child { border-bottom: none; }
+.alerta-bloque a { color: var(--texto); text-decoration: none; }
+.alerta-bloque a:hover { color: var(--azul-acento); }
+.sin-alertas {
+  background: #e6f6ed; color: var(--verde); border: 1px solid #bfe8d1;
+  border-radius: var(--radio); padding: 14px 18px; font-size: 14px; margin-bottom: 28px;
+}
+
+.desglose-fila { display: flex; justify-content: space-between; align-items: center; padding: 8px 0; border-bottom: 1px solid var(--gris-borde); font-size: 14px; }
+.desglose-fila:last-child { border-bottom: none; }
+.desglose-fila a { color: var(--texto); text-decoration: none; }
+.desglose-fila a:hover { color: var(--azul-acento); }
+.desglose-fila .cantidad { font-weight: 700; }
+
+.semestres-grid { display: flex; gap: 12px; flex-wrap: wrap; }
+.semestre-bloque {
+  flex: 1; min-width: 100px; text-align: center; padding: 14px 10px;
+  border: 1px solid var(--gris-borde); border-radius: var(--radio); background: var(--gris-fondo);
+}
+.semestre-bloque.semestre-excedido { background: #fdeaea; border-color: #f5c6c6; }
+.semestre-bloque .semestre-valor { font-size: 22px; font-weight: 700; color: var(--azul-marino); }
+.semestre-bloque.semestre-excedido .semestre-valor { color: var(--rojo); }
+.semestre-bloque .semestre-etiqueta { font-size: 11px; color: var(--texto-suave); margin-top: 4px; text-transform: uppercase; letter-spacing: 0.03em; }
+
 .tabs { display: flex; gap: 4px; border-bottom: 1px solid var(--gris-borde); margin-bottom: 20px; }
 .tab-boton {
   padding: 10px 18px; font-size: 14px; font-weight: 600; color: var(--texto-suave);

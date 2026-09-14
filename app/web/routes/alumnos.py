@@ -1,7 +1,14 @@
+from urllib.parse import urlencode
+
 from flask import Blueprint, flash, redirect, render_template, request, url_for
 
 from app.models import Lector, Sinodal
-from app.repositories.alumno_repository import buscar_alumnos, obtener_alumno
+from app.repositories.alumno_repository import (
+    buscar_alumnos_filtrado,
+    obtener_alumno,
+    valores_distintos_ciclo_ingreso,
+    valores_distintos_dictamen,
+)
 from app.repositories.catalogo_repository import listar_lies, listar_status
 from app.repositories.comite_repository import comite_vigente, historial_comites
 from app.repositories.direccion_repository import direcciones_vigentes, historial_direcciones
@@ -12,17 +19,47 @@ from app.services.comite_service import asignar_comite_tutorial
 from app.services.direccion_service import asignar_direccion
 from app.services.configuracion_service import ciclo_escolar_vigente
 from app.services.titulacion_service import agregar_lector, agregar_sinodal, quitar_lector, quitar_sinodal
+from app.utils.fechas import PROGRAMA_SEMESTRES, semestre_desde_ciclo
 from app.web.db import get_session
 
 bp = Blueprint("alumnos", __name__, url_prefix="/alumnos")
 
 
+def _filtros_desde_form():
+    return dict(
+        texto=request.args.get("q", ""),
+        ciclo_ingreso=request.args.get("ciclo_ingreso", ""),
+        status_codigo=request.args.get("status_codigo", ""),
+        categoria=request.args.get("categoria", ""),
+        lies_id=request.args.get("lies_id", ""),
+        director_id=request.args.get("director_id", ""),
+        dictamen=request.args.get("dictamen", ""),
+        creditos_min=request.args.get("creditos_min", ""),
+        creditos_max=request.args.get("creditos_max", ""),
+        orden=request.args.get("orden", "nombre"),
+    )
+
+
 @bp.route("/")
 def listar():
     session = get_session()
-    texto = request.args.get("q", "")
-    alumnos = buscar_alumnos(session, texto)
-    return render_template("alumnos/list.html", alumnos=alumnos, texto=texto)
+    filtros = _filtros_desde_form()
+    alumnos = buscar_alumnos_filtrado(session, **filtros)
+    filtros_sin_orden = {k: v for k, v in filtros.items() if k != "orden" and v}
+
+    contexto = dict(
+        alumnos=alumnos,
+        filtros=filtros,
+        filtros_qs=urlencode(filtros_sin_orden),
+        status_list=listar_status(session),
+        lies_list=listar_lies(session),
+        directores=listar_profesores(session),
+        ciclo_opciones=valores_distintos_ciclo_ingreso(session),
+        dictamen_opciones=valores_distintos_dictamen(session),
+    )
+    if request.headers.get("HX-Request"):
+        return render_template("alumnos/_tabla.html", **contexto)
+    return render_template("alumnos/list.html", **contexto)
 
 
 @bp.route("/nuevo", methods=["GET", "POST"])
@@ -76,10 +113,14 @@ def detalle(alumno_id):
     vigentes = direcciones_vigentes(session, alumno_id)
     director = next((d for d in vigentes if d.rol == "Director"), None)
     codirector = next((d for d in vigentes if d.rol == "Codirector"), None)
+    ciclo_vigente = ciclo_escolar_vigente(session)
+    semestre = semestre_desde_ciclo(alumno.ciclo_ingreso, ciclo_vigente)
 
     return render_template(
         "alumnos/detalle.html",
         alumno=alumno,
+        semestre=semestre,
+        semestre_maximo=PROGRAMA_SEMESTRES,
         comite=comite,
         historial_comite=historial_comites(session, alumno_id),
         director=director,

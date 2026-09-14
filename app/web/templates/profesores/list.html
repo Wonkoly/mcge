@@ -4,35 +4,48 @@
   <div class="buscador-superior">
     <div>
       <h1>Profesores</h1>
-      <p class="subtitulo">{{ profesores|length }} resultado(s)</p>
     </div>
     <a href="{{ url_for('profesores.nuevo') }}" class="btn">+ Agregar profesor</a>
   </div>
 
-  <form class="barra-busqueda" method="get">
-    <input type="text" name="q" value="{{ texto }}" placeholder="Buscar por nombre o línea de investigación...">
+  <form class="barra-busqueda fila-campos" method="get"
+        hx-get="{{ url_for('profesores.listar') }}"
+        hx-target="#profesores-resultado"
+        hx-trigger="keyup changed delay:300ms, change"
+        hx-push-url="true">
+    <input type="text" name="q" value="{{ filtros.texto }}" placeholder="Buscar por nombre o línea de investigación...">
+
+    <select name="tratamiento">
+      <option value="">— Tratamiento (todos)</option>
+      {% for t in tratamientos %}<option value="{{ t }}" {{ "selected" if filtros.tratamiento == t else "" }}>{{ t }}</option>{% endfor %}
+    </select>
+
+    <select name="sni">
+      <option value="">— SNI (todos)</option>
+      {% for v in sni_opciones %}<option value="{{ v }}" {{ "selected" if filtros.sni == v else "" }}>{{ v }}</option>{% endfor %}
+    </select>
+
+    <select name="dedicacion">
+      <option value="">— Dedicación (todas)</option>
+      {% for v in dedicacion_opciones %}<option value="{{ v }}" {{ "selected" if filtros.dedicacion == v else "" }}>{{ v }}</option>{% endfor %}
+    </select>
+
+    <select name="lies_id">
+      <option value="">— LIES (todas)</option>
+      {% for l in lies_opciones %}<option value="{{ l.id }}" {{ "selected" if filtros.lies_id == l.id|string else "" }}>{{ l.nombre }}</option>{% endfor %}
+    </select>
+
+    <select name="nucleo">
+      <option value="">— Núcleo académico (todos)</option>
+      <option value="si" {{ "selected" if filtros.nucleo == "si" else "" }}>Sólo núcleo</option>
+      <option value="no" {{ "selected" if filtros.nucleo == "no" else "" }}>Sólo externos</option>
+    </select>
+
+    <input type="hidden" name="orden" value="{{ filtros.orden }}">
     <button class="btn btn-secundario" type="submit">Buscar</button>
   </form>
 
-  <div class="panel">
-    <table>
-      <thead>
-        <tr><th>Nombre</th><th>Núcleo académico</th><th>Grado</th><th>Línea de investigación</th><th></th><th></th></tr>
-      </thead>
-      <tbody>
-        {% for p in profesores %}
-          <tr>
-            <td>{{ p.nombre }}</td>
-            <td>{% if p.nucleo_academico %}<span class="badge badge-activo">Sí</span>{% else %}<span class="badge">Externo</span>{% endif %}</td>
-            <td>{{ p.grado or "—" }}</td>
-            <td>{{ p.linea_investigacion or "—" }}</td>
-            <td><a class="btn btn-pequeno btn-secundario" href="{{ url_for('profesores.detalle', profesor_id=p.id) }}">Observar</a></td>
-            <td><a class="btn btn-pequeno btn-secundario" href="{{ url_for('profesores.editar', profesor_id=p.id) }}">Editar</a></td>
-          </tr>
-        {% else %}
-          <tr><td colspan="6" class="vacio">No se encontraron profesores.</td></tr>
-        {% endfor %}
-      </tbody>
-    </table>
+  <div id="profesores-resultado">
+    {% include "profesores/_tabla.html" %}
   </div>
 {% endblock %}

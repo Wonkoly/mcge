@@ -12,13 +12,21 @@
 
     <div class="fila-campos">
       <div class="campo">
-        <label>Grado académico</label>
-        <input type="text" name="grado">
+        <label>Tratamiento</label>
+        <select name="tratamiento">
+          <option value="">— (sin tratamiento, el nombre va solo en los documentos)</option>
+          {% for t in tratamientos %}<option value="{{ t }}">{{ t }}</option>{% endfor %}
+        </select>
       </div>
       <div class="campo">
         <label>CVU</label>
         <input type="text" name="cvu">
       </div>
+    </div>
+
+    <div class="campo">
+      <label>Disciplina / grado (informativo — no aparece en oficios/constancias)</label>
+      <input type="text" name="grado" placeholder="ej. Doctor en Ciencias de la Tierra, CICESE">
     </div>
 
     <div class="fila-campos">
@@ -30,6 +38,11 @@
         <label>Teléfono</label>
         <input type="text" name="telefono">
       </div>
+    </div>
+
+    <div class="campo">
+      <label>Centro universitario</label>
+      <input type="text" name="centro_universitario" value="Centro Universitario de la Costa">
     </div>
 
     <div class="campo">

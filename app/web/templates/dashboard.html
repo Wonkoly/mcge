@@ -1,25 +1,120 @@
 {% extends "base.html" %}
+{% import "macros/ui.html" as ui %}
 {% block titulo %}Panel{% endblock %}
 {% block contenido %}
   <h1>Panel</h1>
-  <p class="subtitulo">Resumen general del programa.</p>
+  <p class="subtitulo">Resumen general del programa · Ciclo escolar vigente: <strong>{{ ciclo_vigente }}</strong></p>
+
+  <div class="alertas-seccion">
+    {% set total_alertas = alertas.en_ultimo_semestre|length + alertas.excedieron|length
+                            + alertas.creditos_faltantes_avanzado|length + alertas.max_ciclo_rebasado|length
+                            + alertas.profesores_exceso|length + alertas.directores_alumno_rezagado|length %}
+    {% if total_alertas == 0 %}
+      <div class="sin-alertas">✓ Sin casos a cuidar por ahora — todos los alumnos activos y profesores están dentro de los límites del programa.</div>
+    {% else %}
+      <h2>Casos a cuidar ({{ total_alertas }})</h2>
+      <div class="alertas-grid">
+        {% if alertas.excedieron %}
+          <div class="alerta-bloque alerta-grave">
+            <div class="alerta-titulo">Excedieron los {{ programa_semestres }} semestres y siguen activos</div>
+            <div class="alerta-conteo">{{ alertas.excedieron|length }} alumno(s)</div>
+            <ul>{% for a in alertas.excedieron %}<li><a href="{{ url_for('alumnos.detalle', alumno_id=a.id) }}">{{ a.nombre }}</a></li>{% endfor %}</ul>
+          </div>
+        {% endif %}
+        {% if alertas.en_ultimo_semestre %}
+          <div class="alerta-bloque">
+            <div class="alerta-titulo">En {{ programa_semestres }}º semestre sin titularse</div>
+            <div class="alerta-conteo">{{ alertas.en_ultimo_semestre|length }} alumno(s)</div>
+            <ul>{% for a in alertas.en_ultimo_semestre %}<li><a href="{{ url_for('alumnos.detalle', alumno_id=a.id) }}">{{ a.nombre }}</a></li>{% endfor %}</ul>
+          </div>
+        {% endif %}
+        {% if alertas.creditos_faltantes_avanzado %}
+          <div class="alerta-bloque alerta-grave">
+            <div class="alerta-titulo">Créditos faltantes en semestre avanzado</div>
+            <div class="alerta-conteo">{{ alertas.creditos_faltantes_avanzado|length }} alumno(s)</div>
+            <ul>{% for a in alertas.creditos_faltantes_avanzado %}<li><a href="{{ url_for('alumnos.detalle', alumno_id=a.id) }}">{{ a.nombre }}</a> — faltan {{ a.creditos_faltantes }}</li>{% endfor %}</ul>
+          </div>
+        {% endif %}
+        {% if alertas.max_ciclo_rebasado %}
+          <div class="alerta-bloque alerta-grave">
+            <div class="alerta-titulo">Rebasaron su Máximo Ciclo</div>
+            <div class="alerta-conteo">{{ alertas.max_ciclo_rebasado|length }} alumno(s)</div>
+            <ul>{% for a in alertas.max_ciclo_rebasado %}<li><a href="{{ url_for('alumnos.detalle', alumno_id=a.id) }}">{{ a.nombre }}</a> — máximo {{ a.maximo_ciclo }}</li>{% endfor %}</ul>
+          </div>
+        {% endif %}
+        {% if alertas.profesores_exceso %}
+          <div class="alerta-bloque">
+            <div class="alerta-titulo">Profesores con más de {{ limite_alumnos_profesor }} alumnos a cargo</div>
+            <div class="alerta-conteo">{{ alertas.profesores_exceso|length }} profesor(es)</div>
+            <ul>{% for p, n in alertas.profesores_exceso %}<li><a href="{{ url_for('profesores.detalle', profesor_id=p.id) }}">{{ p.nombre }}</a> — {{ n }} alumnos</li>{% endfor %}</ul>
+          </div>
+        {% endif %}
+        {% if alertas.directores_alumno_rezagado %}
+          <div class="alerta-bloque">
+            <div class="alerta-titulo">Directores con alumno rezagado (no deberían recibir alumnos nuevos)</div>
+            <div class="alerta-conteo">{{ alertas.directores_alumno_rezagado|length }} profesor(es)</div>
+            <ul>{% for p in alertas.directores_alumno_rezagado %}<li><a href="{{ url_for('profesores.detalle', profesor_id=p.id) }}">{{ p.nombre }}</a></li>{% endfor %}</ul>
+          </div>
+        {% endif %}
+      </div>
+    {% endif %}
+  </div>
 
   <div class="tarjetas">
-    <div class="tarjeta">
+    <a href="{{ url_for('alumnos.listar') }}" class="tarjeta">
       <div class="valor">{{ stats.total_alumnos }}</div>
       <div class="etiqueta">Alumnos totales</div>
-    </div>
-    <div class="tarjeta">
+    </a>
+    <a href="{{ url_for('alumnos.listar', categoria='activo') }}" class="tarjeta">
       <div class="valor">{{ stats.activos }}</div>
-      <div class="etiqueta">Alumnos activos</div>
-    </div>
-    <div class="tarjeta">
+      <div class="etiqueta">Activos</div>
+    </a>
+    <a href="{{ url_for('alumnos.listar', categoria='proceso_titulacion') }}" class="tarjeta">
+      <div class="valor">{{ stats.proceso_titulacion }}</div>
+      <div class="etiqueta">Proceso de Titulación</div>
+    </a>
+    <a href="{{ url_for('alumnos.listar', categoria='graduado') }}" class="tarjeta">
+      <div class="valor">{{ stats.graduados }}</div>
+      <div class="etiqueta">Graduados</div>
+    </a>
+    <a href="{{ url_for('alumnos.listar', categoria='titulado') }}" class="tarjeta">
+      <div class="valor">{{ stats.titulados }}</div>
+      <div class="etiqueta">Titulados</div>
+    </a>
+    <a href="{{ url_for('alumnos.listar', categoria='baja') }}" class="tarjeta">
+      <div class="valor">{{ stats.bajas }}</div>
+      <div class="etiqueta">Bajas</div>
+    </a>
+    <a href="{{ url_for('aspirantes.listar') }}" class="tarjeta">
       <div class="valor">{{ stats.aspirantes_pendientes }}</div>
       <div class="etiqueta">Aspirantes en proceso</div>
-    </div>
-    <div class="tarjeta">
+    </a>
+    <a href="{{ url_for('profesores.listar') }}" class="tarjeta">
       <div class="valor">{{ stats.total_nucleo }} / {{ stats.total_profesores }}</div>
       <div class="etiqueta">Núcleo académico / Profesores totales</div>
+    </a>
+  </div>
+
+  <div class="panel">
+    <h2>Avance por semestre (alumnos activos)</h2>
+    <p class="subtitulo">Calculado a partir del ciclo de ingreso de cada alumno y el ciclo vigente — se actualiza solo al cambiar de ciclo en Configuración.</p>
+    <div class="semestres-grid">
+      {% for n in range(1, programa_semestres + 1) %}
+        <div class="semestre-bloque">
+          <div class="semestre-valor">{{ semestres.get(n, 0) }}</div>
+          <div class="semestre-etiqueta">Semestre {{ n }}</div>
+        </div>
+      {% endfor %}
+      <div class="semestre-bloque semestre-excedido">
+        <div class="semestre-valor">{{ semestres.get("excedido", 0) }}</div>
+        <div class="semestre-etiqueta">Excedieron</div>
+      </div>
+      {% if semestres.get("sin_dato", 0) > 0 %}
+        <div class="semestre-bloque">
+          <div class="semestre-valor">{{ semestres.get("sin_dato", 0) }}</div>
+          <div class="semestre-etiqueta">Sin ciclo capturado</div>
+        </div>
+      {% endif %}
     </div>
   </div>
 
@@ -28,11 +123,32 @@
     <table>
       <thead><tr><th>Status</th><th>Alumnos</th></tr></thead>
       <tbody>
-        {% for nombre, cantidad in stats.por_status %}
-          <tr><td>{{ nombre or "Sin status" }}</td><td>{{ cantidad }}</td></tr>
+        {% for status, cantidad in stats.por_status %}
+          <tr>
+            <td>
+              {% if status %}
+                <a href="{{ url_for('alumnos.listar', status_codigo=status.codigo) }}">{{ ui.badge_status(status) }}</a>
+              {% else %}
+                <span class="badge">Sin status</span>
+              {% endif %}
+            </td>
+            <td>{{ cantidad }}</td>
+          </tr>
         {% endfor %}
       </tbody>
     </table>
+  </div>
+
+  <div class="panel">
+    <h2>Alumnos activos por ciclo de ingreso</h2>
+    {% for ciclo, cantidad in por_ciclo %}
+      <div class="desglose-fila">
+        <a href="{{ url_for('alumnos.listar', categoria='activo', ciclo_ingreso=ciclo) }}">{{ ciclo }}</a>
+        <span class="cantidad">{{ cantidad }}</span>
+      </div>
+    {% else %}
+      <p class="vacio">Sin alumnos activos con ciclo de ingreso capturado.</p>
+    {% endfor %}
   </div>
 
   <div class="acciones-form">

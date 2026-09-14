@@ -1,0 +1,37 @@
+<p class="subtitulo" id="alumnos-contador">{{ alumnos|length }} resultado(s)</p>
+{% set prefijo_qs = filtros_qs + "&" if filtros_qs else "" %}
+<div class="panel">
+  <table>
+    <thead>
+      <tr>
+        <th>Código</th>
+        <th><a href="?{{ prefijo_qs }}orden={{ 'nombre' if filtros.orden != 'nombre' else '-nombre' }}"
+               hx-get="{{ url_for('alumnos.listar') }}?{{ prefijo_qs }}orden={{ 'nombre' if filtros.orden != 'nombre' else '-nombre' }}"
+               hx-target="#alumnos-resultado" hx-push-url="true">Nombre {{ "▲" if filtros.orden == "nombre" else "▼" if filtros.orden == "-nombre" else "" }}</a></th>
+        <th><a href="?{{ prefijo_qs }}orden={{ 'ciclo_ingreso' if filtros.orden != 'ciclo_ingreso' else '-ciclo_ingreso' }}"
+               hx-get="{{ url_for('alumnos.listar') }}?{{ prefijo_qs }}orden={{ 'ciclo_ingreso' if filtros.orden != 'ciclo_ingreso' else '-ciclo_ingreso' }}"
+               hx-target="#alumnos-resultado" hx-push-url="true">Ciclo {{ "▲" if filtros.orden == "ciclo_ingreso" else "▼" if filtros.orden == "-ciclo_ingreso" else "" }}</a></th>
+        <th>Status</th>
+        <th><a href="?{{ prefijo_qs }}orden={{ 'creditos_acumulados' if filtros.orden != 'creditos_acumulados' else '-creditos_acumulados' }}"
+               hx-get="{{ url_for('alumnos.listar') }}?{{ prefijo_qs }}orden={{ 'creditos_acumulados' if filtros.orden != 'creditos_acumulados' else '-creditos_acumulados' }}"
+               hx-target="#alumnos-resultado" hx-push-url="true">Créditos {{ "▲" if filtros.orden == "creditos_acumulados" else "▼" if filtros.orden == "-creditos_acumulados" else "" }}</a></th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for a in alumnos %}
+        <tr class="clicable" onclick="window.location='{{ url_for('alumnos.detalle', alumno_id=a.id) }}'">
+          <td>{{ a.codigo }}</td>
+          <td>{{ a.nombre }}</td>
+          <td>{{ a.ciclo_ingreso or "—" }}</td>
+          <td>
+            {% set cat = a.status.categoria if a.status else "" %}
+            <span class="badge badge-{{ cat }}">{{ a.status.nombre if a.status else (a.status_codigo or "—") }}</span>
+          </td>
+          <td>{{ a.creditos_acumulados if a.creditos_acumulados is not none else "—" }}</td>
+        </tr>
+      {% else %}
+        <tr><td colspan="5" class="vacio">No se encontraron alumnos.</td></tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</div>

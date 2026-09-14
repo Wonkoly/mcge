@@ -3,16 +3,51 @@
 {% block contenido %}
   <p><a href="{{ url_for('alumnos.listar') }}">&larr; Volver a alumnos</a></p>
 
-  <div class="expediente-cabecera" style="display:flex; justify-content:space-between; align-items:flex-start;">
-    <div>
+  <div class="tarjeta-encabezado">
+    <div class="fila-superior">
       <div class="nombre">{{ alumno.nombre }}</div>
-      <div class="meta">Código {{ alumno.codigo }} · Ciclo {{ alumno.ciclo_ingreso or "—" }} ·
-        <span class="badge badge-{{ alumno.status.categoria if alumno.status else '' }}">
-          {{ alumno.status.nombre if alumno.status else (alumno.status_codigo or "—") }}
-        </span>
+      <a class="btn btn-secundario btn-pequeno" href="{{ url_for('alumnos.editar', alumno_id=alumno.id) }}">Editar datos</a>
+    </div>
+
+    <div class="destacados">
+      <div class="destacado">
+        <div class="etiqueta">Código</div>
+        <div class="valor">{{ alumno.codigo }}</div>
+      </div>
+      <div class="destacado">
+        <div class="etiqueta">Ciclo de ingreso</div>
+        <div class="valor">{{ alumno.ciclo_ingreso or "—" }}</div>
+      </div>
+      <div class="destacado">
+        <div class="etiqueta">Status</div>
+        <div class="valor">
+          <span class="badge badge-{{ alumno.status.categoria if alumno.status else '' }}">
+            {{ alumno.status.nombre if alumno.status else (alumno.status_codigo or "—") }}
+          </span>
+        </div>
+      </div>
+      <div class="destacado">
+        <div class="etiqueta">Semestre</div>
+        {% if semestre is not none %}
+          <div class="valor {{ 'alerta' if semestre > semestre_maximo else '' }}">{{ semestre }} / {{ semestre_maximo }}</div>
+        {% else %}
+          <div class="valor">—</div>
+        {% endif %}
       </div>
     </div>
-    <a class="btn btn-secundario btn-pequeno" href="{{ url_for('alumnos.editar', alumno_id=alumno.id) }}">Editar datos</a>
+
+    {% if alumno.creditos_acumulados is not none and alumno.creditos_faltantes is not none
+          and (alumno.creditos_acumulados + alumno.creditos_faltantes) > 0 %}
+      {% set total_creditos = alumno.creditos_acumulados + alumno.creditos_faltantes %}
+      {% set porcentaje = [(100 * alumno.creditos_acumulados / total_creditos) | round | int, 100] | min %}
+      <div class="barra-progreso-bloque">
+        <div class="barra-progreso-etiqueta">
+          <span>Avance de créditos</span>
+          <span>{{ alumno.creditos_acumulados }} / {{ total_creditos }} ({{ porcentaje }}%)</span>
+        </div>
+        <div class="barra-progreso"><div class="barra-progreso-relleno" style="width: {{ porcentaje }}%;"></div></div>
+      </div>
+    {% endif %}
   </div>
 
   <div class="tabs">
