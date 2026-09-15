@@ -1,0 +1,83 @@
+{% extends "base.html" %}
+{% block titulo %}Nuevo alumno{% endblock %}
+{% block contenido %}
+  <h1>Agregar alumno</h1>
+  <p class="subtitulo">Alta manual. Los campos con * son obligatorios.</p>
+
+  <form class="formulario" method="post">
+    {{ csrf_input() }}
+    <div class="fila-campos">
+      <div class="campo">
+        <label>Código *</label>
+        <input type="text" name="codigo" required>
+      </div>
+      <div class="campo">
+        <label>Nombre completo *</label>
+        <input type="text" name="nombre" required>
+      </div>
+    </div>
+
+    <div class="fila-campos">
+      <div class="campo">
+        <label>Ciclo de ingreso</label>
+        <input type="text" name="ciclo_ingreso" placeholder="ej. 2026 B">
+      </div>
+      <div class="campo">
+        <label>Status</label>
+        <select name="status_codigo">
+          <option value="">—</option>
+          {% for s in status_list %}
+            <option value="{{ s.codigo }}">{{ s.nombre }} ({{ s.codigo }})</option>
+          {% endfor %}
+        </select>
+      </div>
+    </div>
+
+    <div class="fila-campos">
+      <div class="campo">
+        <label>Correo personal</label>
+        <input type="email" name="correo_personal">
+      </div>
+      <div class="campo">
+        <label>Correo institucional</label>
+        <input type="email" name="correo_institucional">
+      </div>
+    </div>
+
+    <div class="fila-campos">
+      <div class="campo">
+        <label>Teléfono</label>
+        <input type="text" name="telefono">
+      </div>
+      <div class="campo">
+        <label>Fecha de nacimiento</label>
+        <input type="date" name="fecha_nacimiento">
+      </div>
+    </div>
+
+    <div class="campo">
+      <label>LIES</label>
+      <select name="lies_id">
+        <option value="">—</option>
+        {% for l in lies_list %}
+          <option value="{{ l.id }}">{{ l.nombre }}</option>
+        {% endfor %}
+      </select>
+    </div>
+
+    <div class="campo">
+      <label>Título de tesis (si ya lo tiene)</label>
+      <input type="text" name="tesis_titulo">
+    </div>
+
+    <div class="campo">
+      <label>Observaciones</label>
+      <textarea name="observaciones" rows="3"></textarea>
+    </div>
+
+    <div class="acciones-form">
+      <button class="btn" type="submit">Guardar alumno</button>
+      <a class="btn btn-secundario" href="{{ url_for('alumnos.listar') }}">Cancelar</a>
+    </div>
+  </form>
+{% endblock %}

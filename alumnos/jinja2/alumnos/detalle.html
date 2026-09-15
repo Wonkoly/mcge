@@ -1,0 +1,238 @@
+{% extends "base.html" %}
+{% import "macros/ui.html" as ui %}
+{% block titulo %}{{ alumno.nombre }}{% endblock %}
+{% block contenido %}
+  <p><a href="{{ url_for('alumnos.listar') }}">&larr; Volver a alumnos</a></p>
+
+  <div class="tarjeta-encabezado">
+    <div class="fila-superior">
+      <div class="nombre">{{ alumno.nombre }}</div>
+      <a class="btn btn-secundario btn-pequeno" href="{{ url_for('alumnos.editar', alumno_id=alumno.id) }}">Editar datos</a>
+    </div>
+
+    <div class="destacados">
+      <div class="destacado">
+        <div class="etiqueta">Código</div>
+        <div class="valor">{{ alumno.codigo }}</div>
+      </div>
+      <div class="destacado">
+        <div class="etiqueta">Ciclo de ingreso</div>
+        <div class="valor">{{ alumno.ciclo_ingreso or "—" }}</div>
+      </div>
+      <div class="destacado">
+        <div class="etiqueta">Status</div>
+        <div class="valor">{{ ui.badge_status(alumno.status) }}</div>
+      </div>
+      <div class="destacado">
+        <div class="etiqueta">Semestre</div>
+        {% if semestre is not none %}
+          <div class="valor {{ 'alerta' if semestre > semestre_maximo else '' }}">{{ semestre }} / {{ semestre_maximo }}</div>
+        {% else %}
+          <div class="valor">—</div>
+        {% endif %}
+      </div>
+    </div>
+
+    {% if alumno.creditos_acumulados is not none and alumno.creditos_faltantes is not none
+          and (alumno.creditos_acumulados + alumno.creditos_faltantes) > 0 %}
+      {% set total_creditos = alumno.creditos_acumulados + alumno.creditos_faltantes %}
+      {% set porcentaje = [(100 * alumno.creditos_acumulados / total_creditos) | round | int, 100] | min %}
+      <div class="barra-progreso-bloque">
+        <div class="barra-progreso-etiqueta">
+          <span>Avance de créditos</span>
+          <span>{{ alumno.creditos_acumulados }} / {{ total_creditos }} ({{ porcentaje }}%)</span>
+        </div>
+        <div class="barra-progreso"><div class="barra-progreso-relleno" style="width: {{ porcentaje }}%;"></div></div>
+      </div>
+    {% endif %}
+  </div>
+
+  <div class="tabs">
+    <button class="tab-boton activo" data-tab="datos">Datos generales</button>
+    <button class="tab-boton" data-tab="comite">Comité Tutorial</button>
+    <button class="tab-boton" data-tab="direccion">Dirección / Codirección</button>
+    <button class="tab-boton" data-tab="titulacion">Titulación</button>
+  </div>
+
+  <div id="tab-datos" class="tab-panel activo">
+    <div class="panel">
+      <dl class="datos">
+        <dt>Correo</dt><dd>{{ alumno.correo_institucional or alumno.correo_personal or "—" }}</dd>
+        <dt>Teléfono</dt><dd>{{ alumno.telefono or "—" }}</dd>
+        <dt>Créditos (acum. / faltan)</dt><dd>{{ alumno.creditos_acumulados if alumno.creditos_acumulados is not none else "—" }} / {{ alumno.creditos_faltantes if alumno.creditos_faltantes is not none else "—" }}</dd>
+        <dt>Promedio</dt><dd>{{ alumno.promedio if alumno.promedio is not none else "—" }}</dd>
+        <dt>LIES</dt><dd>{{ alumno.lies.nombre if alumno.lies else "—" }}</dd>
+        <dt>CVU</dt><dd>{{ alumno.cvu or "—" }}</dd>
+        <dt>Título de tesis</dt><dd>{{ alumno.tesis_titulo or "—" }}</dd>
+        <dt>Observaciones</dt><dd>{{ alumno.observaciones or "—" }}</dd>
+      </dl>
+    </div>
+  </div>
+
+  <div id="tab-comite" class="tab-panel">
+    <div class="panel">
+      <h2>Vigente</h2>
+      {% if comite %}
+        <p>Ciclo {{ comite.ciclo or "—" }} (desde {{ comite.fecha_inicio or "fecha desconocida" }})</p>
+        <p class="subtitulo" style="margin:0 0 12px;">
+          {% if comite.acta %}Aprobado en el acta <a href="{{ url_for('actas.detalle', acta_id=comite.acta.id) }}">{{ comite.acta.numero }}</a>{% if comite.acta.fecha %} del {{ comite.acta.fecha }}{% endif %}
+          {% else %}<span style="color:var(--amarillo);">⚠ Sin acta vinculada</span>{% endif %}
+        </p>
+        <ul class="lista-simple">
+          {% for m in comite.miembros.all() %}<li>{{ m.profesor.nombre }}</li>{% endfor %}
+        </ul>
+      {% else %}
+        <p class="vacio">Sin comité tutorial asignado.</p>
+      {% endif %}
+    </div>
+
+    <p class="subtitulo">Los cambios de comité tutorial se hacen desde Actas, no aquí — esta pantalla es solo de consulta. El editor de actas se agrega en su propia fase.</p>
+
+    <div class="panel">
+      <h2>Historial</h2>
+      {% if historial_comite %}
+        <table>
+          <thead><tr><th>Desde</th><th>Estado</th><th>Ciclo</th><th>Acta</th><th>Miembros</th></tr></thead>
+          <tbody>
+            {% for c in historial_comite %}
+              <tr>
+                <td>{{ c.fecha_inicio or "desconocida" }}</td>
+                <td>{{ "Vigente" if c.vigente else "Cerrado " ~ c.fecha_fin }}</td>
+                <td>{{ c.ciclo or "—" }}</td>
+                <td>{% if c.acta %}<a href="{{ url_for('actas.detalle', acta_id=c.acta.id) }}">{{ c.acta.numero }}</a>{% else %}—{% endif %}</td>
+                <td>{{ c.miembros.all() | map(attribute="profesor") | map(attribute="nombre") | join(", ") }}</td>
+              </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      {% else %}
+        <p class="vacio">Sin historial.</p>
+      {% endif %}
+    </div>
+  </div>
+
+  <div id="tab-direccion" class="tab-panel">
+    <div class="panel">
+      <h2>Vigente</h2>
+      <p>Director: <strong>{{ director.profesor.nombre if director else "—" }}</strong>
+        {% if director %}{% if director.acta %} — acta <a href="{{ url_for('actas.detalle', acta_id=director.acta.id) }}">{{ director.acta.numero }}</a>{% if director.acta.fecha %} del {{ director.acta.fecha }}{% endif %}{% else %}<span style="color:var(--amarillo);"> ⚠ Sin acta vinculada</span>{% endif %}{% endif %}
+      </p>
+      <p>Codirector: <strong>{{ codirector.profesor.nombre if codirector else "—" }}</strong>
+        {% if codirector %}{% if codirector.acta %} — acta <a href="{{ url_for('actas.detalle', acta_id=codirector.acta.id) }}">{{ codirector.acta.numero }}</a>{% if codirector.acta.fecha %} del {{ codirector.acta.fecha }}{% endif %}{% else %}<span style="color:var(--amarillo);"> ⚠ Sin acta vinculada</span>{% endif %}{% endif %}
+      </p>
+    </div>
+
+    <p class="subtitulo">Los cambios de Director/Codirector se hacen desde Actas, no aquí — esta pantalla es solo de consulta. El editor de actas se agrega en su propia fase.</p>
+
+    <div class="panel">
+      <h2>Historial</h2>
+      {% if historial_direccion %}
+        <table>
+          <thead><tr><th>Desde</th><th>Estado</th><th>Rol</th><th>Profesor</th><th>Acta</th></tr></thead>
+          <tbody>
+            {% for d in historial_direccion %}
+              <tr>
+                <td>{{ d.fecha_inicio or "desconocida" }}</td>
+                <td>{{ "Vigente" if d.vigente else "Cerrado " ~ d.fecha_fin }}</td>
+                <td>{{ d.rol }}</td>
+                <td>{{ d.profesor.nombre }}</td>
+                <td>{% if d.acta %}<a href="{{ url_for('actas.detalle', acta_id=d.acta.id) }}">{{ d.acta.numero }}</a>{% else %}—{% endif %}</td>
+              </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      {% else %}
+        <p class="vacio">Sin historial.</p>
+      {% endif %}
+    </div>
+  </div>
+
+  <div id="tab-titulacion" class="tab-panel">
+    <div class="panel">
+      <h2>Lectores de tesis ({{ lectores|length }}/3)</h2>
+      <p class="subtitulo">Certifican que el documento de tesis está terminado — requisito para cargar los 10 créditos de "Trabajo de Tesis".</p>
+      {% for l in lectores %}
+        <div style="display:flex; justify-content:space-between; align-items:center; padding:8px 0; border-bottom:1px solid var(--gris-borde);">
+          <span>{{ l.profesor.nombre }}{% if l.fecha %} — {{ l.fecha }}{% endif %}</span>
+          <form method="post" action="{{ url_for('alumnos.quitar_lector_route', alumno_id=alumno.id, lector_id=l.id) }}" onsubmit="return confirm('¿Quitar este lector?');">
+            {{ csrf_input() }}
+            <button class="btn btn-pequeno btn-secundario" type="submit">Quitar</button>
+          </form>
+        </div>
+      {% else %}
+        <p class="vacio">Sin lectores asignados.</p>
+      {% endfor %}
+      {% if lectores|length < 3 %}
+        <form method="post" action="{{ url_for('alumnos.agregar_lector_route', alumno_id=alumno.id) }}" class="formulario" style="margin-top:16px;">
+          {{ csrf_input() }}
+          <div class="fila-campos">
+            <div class="campo">
+              <label>Profesor</label>
+              <select name="profesor_id">
+                {% for p in profesores %}<option value="{{ p.id }}">{{ p.nombre }}</option>{% endfor %}
+              </select>
+            </div>
+            <div class="campo">
+              <label>Fecha (opcional)</label>
+              <input type="date" name="fecha">
+            </div>
+          </div>
+          <div class="acciones-form"><button class="btn btn-pequeno" type="submit">Agregar lector</button></div>
+        </form>
+      {% endif %}
+    </div>
+
+    <div class="panel">
+      <h2>Sinodales / Jurado de examen ({{ sinodales|length }}/3)</h2>
+      {% for s in sinodales %}
+        <div style="display:flex; justify-content:space-between; align-items:center; padding:8px 0; border-bottom:1px solid var(--gris-borde);">
+          <span><strong>{{ s.cargo }}:</strong> {{ s.profesor.nombre }}{% if s.fecha_examen %} — examen {{ s.fecha_examen }}{% endif %}</span>
+          <form method="post" action="{{ url_for('alumnos.quitar_sinodal_route', alumno_id=alumno.id, sinodal_id=s.id) }}" onsubmit="return confirm('¿Quitar este sinodal?');">
+            {{ csrf_input() }}
+            <button class="btn btn-pequeno btn-secundario" type="submit">Quitar</button>
+          </form>
+        </div>
+      {% else %}
+        <p class="vacio">Sin sinodales asignados.</p>
+      {% endfor %}
+      {% if sinodales|length < 3 %}
+        <form method="post" action="{{ url_for('alumnos.agregar_sinodal_route', alumno_id=alumno.id) }}" class="formulario" style="margin-top:16px;">
+          {{ csrf_input() }}
+          <div class="fila-campos">
+            <div class="campo">
+              <label>Profesor</label>
+              <select name="profesor_id">
+                {% for p in profesores %}<option value="{{ p.id }}">{{ p.nombre }}</option>{% endfor %}
+              </select>
+            </div>
+            <div class="campo">
+              <label>Cargo</label>
+              <select name="cargo">
+                <option value="Presidente">Presidente</option>
+                <option value="Secretario">Secretario</option>
+                <option value="Vocal">Vocal</option>
+              </select>
+            </div>
+          </div>
+          <div class="fila-campos">
+            <div class="campo"><label>Fecha de examen</label><input type="date" name="fecha_examen"></div>
+            <div class="campo"><label>Hora</label><input type="text" name="hora_examen" placeholder="ej. 11:00"></div>
+          </div>
+          <div class="campo"><label>Lugar</label><input type="text" name="lugar_examen" placeholder="ej. Edificio de Ciencias de la Tierra, aula A001"></div>
+          <div class="acciones-form"><button class="btn btn-pequeno" type="submit">Agregar sinodal</button></div>
+        </form>
+      {% endif %}
+    </div>
+  </div>
+
+  <script>
+    document.querySelectorAll(".tab-boton").forEach(function (boton) {
+      boton.addEventListener("click", function () {
+        document.querySelectorAll(".tab-boton").forEach(function (b) { b.classList.remove("activo"); });
+        document.querySelectorAll(".tab-panel").forEach(function (p) { p.classList.remove("activo"); });
+        boton.classList.add("activo");
+        document.getElementById("tab-" + boton.dataset.tab).classList.add("activo");
+      });
+    });
+  </script>
+{% endblock %}

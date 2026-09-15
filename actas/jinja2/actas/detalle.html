@@ -1,0 +1,35 @@
+{% extends "base.html" %}
+{% block titulo %}Acta {{ acta.numero }}{% endblock %}
+{% block contenido %}
+  <p><a href="{{ url_for('actas.listar') }}">&larr; Volver a actas</a></p>
+  <h1>Acta {{ acta.numero }}</h1>
+
+  <div class="panel">
+    <dl class="datos">
+      <dt>Fecha</dt><dd>{{ acta.fecha or "—" }}</dd>
+      <dt>Lugar</dt><dd>{{ acta.lugar or "—" }}</dd>
+      <dt>Sede</dt><dd>{{ acta.sede or "—" }}</dd>
+      <dt>Hora</dt><dd>{{ acta.hora_inicio or "—" }}{% if acta.hora_fin %} a {{ acta.hora_fin }}{% endif %}</dd>
+      <dt>Asistentes</dt><dd>{{ acta.asistentes or "—" }}</dd>
+      <dt>Resumen</dt><dd>{{ acta.resumen or "—" }}</dd>
+    </dl>
+  </div>
+
+  <div class="panel">
+    <h2>Cambios registrados desde esta acta</h2>
+    <ul class="lista-simple">
+      {% for d in acta.direccion_set.all() %}
+        <li>{{ d.rol }}: <a href="{{ url_for('alumnos.detalle', alumno_id=d.alumno_id) }}">{{ d.alumno.nombre }}</a> — {{ d.profesor.nombre }}</li>
+      {% endfor %}
+      {% for c in acta.comitetutorial_set.all() %}
+        <li>Comité tutorial: <a href="{{ url_for('alumnos.detalle', alumno_id=c.alumno_id) }}">{{ c.alumno.nombre }}</a> — {{ c.miembros.all() | map(attribute="profesor") | map(attribute="nombre") | join(", ") }}</li>
+      {% endfor %}
+      {% for l in acta.lector_set.all() %}
+        <li>Lector: <a href="{{ url_for('alumnos.detalle', alumno_id=l.alumno_id) }}">{{ l.alumno.nombre }}</a> — {{ l.profesor.nombre }}</li>
+      {% endfor %}
+      {% for s in acta.sinodal_set.all() %}
+        <li>Sinodal ({{ s.cargo }}): <a href="{{ url_for('alumnos.detalle', alumno_id=s.alumno_id) }}">{{ s.alumno.nombre }}</a> — {{ s.profesor.nombre }}</li>
+      {% endfor %}
+    </ul>
+  </div>
+{% endblock %}

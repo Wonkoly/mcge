@@ -1,0 +1,43 @@
+{% import "macros/ui.html" as ui %}
+<p class="subtitulo" id="profesores-contador">{{ resultados|length }} resultado(s)</p>
+<div class="panel">
+  <table>
+    <thead>
+      {% set prefijo_qs = filtros_qs + "&" if filtros_qs else "" %}
+      <tr>
+        <th><a href="?{{ prefijo_qs }}orden={{ 'nombre' if filtros.orden != 'nombre' else '-nombre' }}"
+               hx-get="{{ url_for('profesores.listar') }}?{{ prefijo_qs }}orden={{ 'nombre' if filtros.orden != 'nombre' else '-nombre' }}"
+               hx-target="#profesores-resultado" hx-push-url="true">Nombre {{ "▲" if filtros.orden == "nombre" else "▼" if filtros.orden == "-nombre" else "" }}</a></th>
+        <th>
+          Tratamiento
+          {{ ui.filtro_columna("tratamiento", "", tratamiento_opciones, filtros.tratamiento) }}
+        </th>
+        <th>
+          Núcleo académico
+          {{ ui.filtro_columna("nucleo", "", nucleo_opciones, filtros.nucleo) }}
+        </th>
+        <th>Línea de investigación</th>
+        <th><a href="?{{ prefijo_qs }}orden={{ 'num_alumnos' if filtros.orden != 'num_alumnos' else '-num_alumnos' }}"
+               hx-get="{{ url_for('profesores.listar') }}?{{ prefijo_qs }}orden={{ 'num_alumnos' if filtros.orden != 'num_alumnos' else '-num_alumnos' }}"
+               hx-target="#profesores-resultado" hx-push-url="true">Alumnos a cargo {{ "▲" if filtros.orden == "num_alumnos" else "▼" if filtros.orden == "-num_alumnos" else "" }}</a></th>
+        <th></th>
+        <th></th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for p, num_alumnos in resultados %}
+        <tr>
+          <td>{{ p.nombre }}</td>
+          <td>{{ p.tratamiento or "—" }}</td>
+          <td>{% if p.nucleo_academico %}<span class="badge badge-activo">Sí</span>{% else %}<span class="badge">Externo</span>{% endif %}</td>
+          <td>{{ p.linea_investigacion or "—" }}</td>
+          <td class="{{ 'alerta' if num_alumnos > 4 else '' }}">{{ num_alumnos }}</td>
+          <td><a class="btn btn-pequeno btn-secundario" href="{{ url_for('profesores.detalle', profesor_id=p.id) }}">Observar</a></td>
+          <td><a class="btn btn-pequeno btn-secundario" href="{{ url_for('profesores.editar', profesor_id=p.id) }}">Editar</a></td>
+        </tr>
+      {% else %}
+        <tr><td colspan="7" class="vacio">No se encontraron profesores.</td></tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</div>

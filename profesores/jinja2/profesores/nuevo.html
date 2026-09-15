@@ -1,0 +1,58 @@
+{% extends "base.html" %}
+{% block titulo %}Nuevo profesor{% endblock %}
+{% block contenido %}
+  <h1>Agregar profesor</h1>
+  <p class="subtitulo">Para profesores externos al núcleo académico oficial (25 personas) que dirigen/codirigen tesis o participan en comités.</p>
+
+  <form class="formulario" method="post">
+    {{ csrf_input() }}
+    <div class="campo">
+      <label>Nombre completo *</label>
+      <input type="text" name="nombre" required placeholder="Sin prefijos Dr./Dra./Mtro. — se limpian automáticamente">
+    </div>
+
+    <div class="fila-campos">
+      <div class="campo">
+        <label>Tratamiento</label>
+        <select name="tratamiento">
+          <option value="">— (sin tratamiento, el nombre va solo en los documentos)</option>
+          {% for t in tratamientos %}<option value="{{ t }}">{{ t }}</option>{% endfor %}
+        </select>
+      </div>
+      <div class="campo">
+        <label>CVU</label>
+        <input type="text" name="cvu">
+      </div>
+    </div>
+
+    <div class="campo">
+      <label>Disciplina / grado (informativo — no aparece en oficios/constancias)</label>
+      <input type="text" name="grado" placeholder="ej. Doctor en Ciencias de la Tierra, CICESE">
+    </div>
+
+    <div class="fila-campos">
+      <div class="campo">
+        <label>Correo</label>
+        <input type="email" name="correo">
+      </div>
+      <div class="campo">
+        <label>Teléfono</label>
+        <input type="text" name="telefono">
+      </div>
+    </div>
+
+    <div class="campo">
+      <label>Centro universitario</label>
+      <input type="text" name="centro_universitario" value="Centro Universitario de la Costa">
+    </div>
+
+    <div class="campo">
+      <label><input type="checkbox" name="nucleo_academico" value="1" style="width:auto; margin-right:8px;"> Pertenece al núcleo académico oficial</label>
+    </div>
+
+    <div class="acciones-form">
+      <button class="btn" type="submit">Guardar profesor</button>
+      <a class="btn btn-secundario" href="{{ url_for('profesores.listar') }}">Cancelar</a>
+    </div>
+  </form>
+{% endblock %}

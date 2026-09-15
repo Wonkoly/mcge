@@ -1,0 +1,46 @@
+{% extends "base.html" %}
+{% block titulo %}Profesores{% endblock %}
+{% block contenido %}
+  <div class="buscador-superior">
+    <div>
+      <h1>Profesores</h1>
+    </div>
+    <a href="{{ url_for('profesores.nuevo') }}" class="btn">+ Agregar profesor</a>
+  </div>
+
+  <form method="get"
+        hx-get="{{ url_for('profesores.listar') }}"
+        hx-target="#profesores-resultado"
+        hx-trigger="keyup changed delay:300ms from:.buscador-texto, change"
+        hx-push-url="true">
+    <div class="barra-busqueda">
+      <input type="text" name="q" class="buscador-texto" value="{{ filtros.texto }}" placeholder="Buscar por nombre o línea de investigación...">
+    </div>
+
+    <details class="mas-filtros">
+      <summary>Más filtros (SNI, Dedicación, LIES)</summary>
+      <div class="mas-filtros-contenido">
+        <select name="sni">
+          <option value="">— SNI (todos) —</option>
+          {% for v in sni_opciones %}<option value="{{ v }}" {{ "selected" if v in filtros.sni else "" }}>{{ v }}</option>{% endfor %}
+        </select>
+
+        <select name="dedicacion">
+          <option value="">— Dedicación (todas) —</option>
+          {% for v in dedicacion_opciones %}<option value="{{ v }}" {{ "selected" if v in filtros.dedicacion else "" }}>{{ v }}</option>{% endfor %}
+        </select>
+
+        <select name="lies_id">
+          <option value="">— LIES (todas) —</option>
+          {% for l in lies_opciones %}<option value="{{ l.id }}" {{ "selected" if l.id|string in filtros.lies_id else "" }}>{{ l.nombre }}</option>{% endfor %}
+        </select>
+      </div>
+    </details>
+
+    <input type="hidden" name="orden" value="{{ filtros.orden }}">
+
+    <div id="profesores-resultado">
+      {% include "profesores/_tabla.html" %}
+    </div>
+  </form>
+{% endblock %}

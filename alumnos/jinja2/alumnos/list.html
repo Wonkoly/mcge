@@ -1,0 +1,49 @@
+{% extends "base.html" %}
+{% block titulo %}Alumnos{% endblock %}
+{% block contenido %}
+  <div class="buscador-superior">
+    <div>
+      <h1>Alumnos</h1>
+    </div>
+    <a href="{{ url_for('alumnos.nuevo') }}" class="btn">+ Agregar alumno</a>
+  </div>
+
+  <form method="get"
+        hx-get="{{ url_for('alumnos.listar') }}"
+        hx-target="#alumnos-resultado"
+        hx-trigger="keyup changed delay:300ms from:.buscador-texto, change"
+        hx-push-url="true">
+    <div class="barra-busqueda">
+      <input type="text" name="q" class="buscador-texto" value="{{ filtros.texto }}" placeholder="Buscar por nombre o código...">
+    </div>
+
+    <details class="mas-filtros">
+      <summary>Más filtros (LIES, Director, Dictamen, créditos)</summary>
+      <div class="mas-filtros-contenido">
+        <select name="lies_id">
+          <option value="">— LIES (todas) —</option>
+          {% for l in lies_list %}<option value="{{ l.id }}" {{ "selected" if l.id|string in filtros.lies_id else "" }}>{{ l.nombre }}</option>{% endfor %}
+        </select>
+
+        <select name="director_id">
+          <option value="">— Director (todos) —</option>
+          {% for p in directores %}<option value="{{ p.id }}" {{ "selected" if p.id|string in filtros.director_id else "" }}>{{ p.nombre }}</option>{% endfor %}
+        </select>
+
+        <select name="dictamen">
+          <option value="">— Dictamen (todos) —</option>
+          {% for d in dictamen_opciones %}<option value="{{ d }}" {{ "selected" if d in filtros.dictamen else "" }}>{{ d }}</option>{% endfor %}
+        </select>
+
+        <input type="number" name="creditos_min" value="{{ filtros.creditos_min }}" placeholder="Créditos mín." style="max-width:130px;">
+        <input type="number" name="creditos_max" value="{{ filtros.creditos_max }}" placeholder="Créditos máx." style="max-width:130px;">
+      </div>
+    </details>
+
+    <input type="hidden" name="orden" value="{{ filtros.orden }}">
+
+    <div id="alumnos-resultado">
+      {% include "alumnos/_tabla.html" %}
+    </div>
+  </form>
+{% endblock %}

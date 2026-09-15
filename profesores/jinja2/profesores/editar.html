@@ -1,0 +1,66 @@
+{% extends "base.html" %}
+{% block titulo %}Editar {{ profesor.nombre }}{% endblock %}
+{% block contenido %}
+  <p><a href="{{ url_for('profesores.listar') }}">&larr; Volver a profesores</a></p>
+  <h1>Editar profesor</h1>
+
+  <form class="formulario" method="post">
+    {{ csrf_input() }}
+    <div class="campo">
+      <label>Nombre completo *</label>
+      <input type="text" name="nombre" value="{{ profesor.nombre }}" required>
+    </div>
+
+    <div class="fila-campos">
+      <div class="campo">
+        <label>Tratamiento</label>
+        <select name="tratamiento">
+          <option value="">— (sin tratamiento)</option>
+          {% for t in tratamientos %}<option value="{{ t }}" {{ "selected" if profesor.tratamiento == t else "" }}>{{ t }}</option>{% endfor %}
+        </select>
+      </div>
+      <div class="campo">
+        <label>CVU</label>
+        <input type="text" name="cvu" value="{{ profesor.cvu or '' }}">
+      </div>
+    </div>
+
+    <div class="campo">
+      <label>Disciplina / grado (informativo — no aparece en oficios/constancias)</label>
+      <input type="text" name="grado" value="{{ profesor.grado or '' }}">
+    </div>
+
+    <div class="fila-campos">
+      <div class="campo">
+        <label>Correo</label>
+        <input type="email" name="correo" value="{{ profesor.correo or '' }}">
+      </div>
+      <div class="campo">
+        <label>Teléfono</label>
+        <input type="text" name="telefono" value="{{ profesor.telefono or '' }}">
+      </div>
+    </div>
+
+    <div class="campo">
+      <label>Centro universitario</label>
+      <input type="text" name="centro_universitario" value="{{ profesor.centro_universitario or 'Centro Universitario de la Costa' }}">
+    </div>
+
+    <div class="campo">
+      <label>Línea de investigación</label>
+      <input type="text" name="linea_investigacion" value="{{ profesor.linea_investigacion or '' }}">
+    </div>
+
+    <div class="campo">
+      <label><input type="checkbox" name="nucleo_academico" value="1" style="width:auto; margin-right:8px;" {{ "checked" if profesor.nucleo_academico else "" }}> Pertenece al núcleo académico oficial</label>
+    </div>
+    <div class="campo">
+      <label><input type="checkbox" name="activo" value="1" style="width:auto; margin-right:8px;" {{ "checked" if profesor.activo else "" }}> Activo</label>
+    </div>
+
+    <div class="acciones-form">
+      <button class="btn" type="submit">Guardar cambios</button>
+      <a class="btn btn-secundario" href="{{ url_for('profesores.listar') }}">Cancelar</a>
+    </div>
+  </form>
+{% endblock %}

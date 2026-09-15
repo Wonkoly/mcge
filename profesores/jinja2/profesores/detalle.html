@@ -1,0 +1,131 @@
+{% extends "base.html" %}
+{% block titulo %}{{ profesor.nombre }}{% endblock %}
+{% block contenido %}
+  <p><a href="{{ url_for('profesores.listar') }}">&larr; Volver a profesores</a></p>
+
+  <div class="tarjeta-encabezado">
+    <div class="fila-superior">
+      <div class="nombre">{{ profesor.prefijo }} {{ profesor.nombre }}</div>
+      <a href="{{ url_for('profesores.editar', profesor_id=profesor.id) }}" class="btn btn-secundario">Editar datos</a>
+    </div>
+
+    <div class="destacados">
+      <div class="destacado">
+        <div class="etiqueta">Tratamiento</div>
+        <div class="valor">{{ profesor.tratamiento or "—" }}</div>
+      </div>
+      <div class="destacado">
+        <div class="etiqueta">Núcleo académico</div>
+        <div class="valor">
+          {% if profesor.nucleo_academico %}<span class="badge badge-activo">Sí</span>{% else %}<span class="badge">Externo</span>{% endif %}
+        </div>
+      </div>
+      <div class="destacado">
+        <div class="etiqueta">SNI</div>
+        <div class="valor">{{ profesor.sni or "—" }}</div>
+      </div>
+      <div class="destacado">
+        <div class="etiqueta">Alumnos a cargo</div>
+        <div class="valor {{ 'alerta' if num_alumnos_vigentes > 4 else '' }}">{{ num_alumnos_vigentes }}</div>
+      </div>
+    </div>
+
+    {% if resumen %}
+      <p class="subtitulo" style="margin: 12px 0 0;">{{ resumen | join(" · ") }}</p>
+    {% endif %}
+  </div>
+
+  <div class="panel">
+    <dl class="datos">
+      <dt>Correo</dt><dd>{{ profesor.correo or "—" }}</dd>
+      <dt>Teléfono</dt><dd>{{ profesor.telefono or "—" }}</dd>
+      <dt>CVU</dt><dd>{{ profesor.cvu or "—" }}</dd>
+      <dt>Disciplina / grado</dt><dd>{{ profesor.grado or "—" }}</dd>
+      <dt>Centro universitario</dt><dd>{{ profesor.centro_universitario or "—" }}</dd>
+      <dt>Línea de investigación</dt><dd>{{ profesor.linea_investigacion or "—" }}</dd>
+      <dt>Dedicación</dt><dd>{{ profesor.dedicacion or "—" }}</dd>
+    </dl>
+  </div>
+
+  <div class="panel">
+    <h2>Dirección / Codirección de tesis ({{ direcciones|length }})</h2>
+    <p class="subtitulo">Alumnos que dirige o codirige, vigentes e histórico.</p>
+    {% if direcciones %}
+      <input type="text" id="filtro-direcciones" class="filtro-lista" placeholder="Buscar alumno por nombre...">
+
+      {% set vigentes = direcciones | selectattr("vigente") | list %}
+      {% set historicas = direcciones | rejectattr("vigente") | list %}
+
+      {% if vigentes %}
+        <h3 class="subtitulo-seccion">Vigentes ({{ vigentes|length }})</h3>
+        <div id="lista-direcciones-vigentes">
+          {% for d in vigentes %}
+            <div class="fila-lista-filtrable" data-nombre="{{ d.alumno.nombre|lower }}">
+              <strong>{{ d.rol }}</strong> de
+              <a href="{{ url_for('alumnos.detalle', alumno_id=d.alumno_id) }}">{{ d.alumno.nombre }}</a>
+              {% if d.alumno.status %}<span class="badge badge-{{ d.alumno.status.categoria }}">{{ d.alumno.status.nombre }}</span>{% endif %}
+              {% if d.alumno.tesis_titulo %}<br><span style="color:var(--texto-suave);">“{{ d.alumno.tesis_titulo }}”</span>{% endif %}
+            </div>
+          {% endfor %}
+        </div>
+      {% endif %}
+
+      {% if historicas %}
+        <h3 class="subtitulo-seccion subtitulo-seccion-historico">Histórico ({{ historicas|length }})</h3>
+        <div id="lista-direcciones-historico">
+          {% for d in historicas %}
+            <div class="fila-lista-filtrable fila-historico" data-nombre="{{ d.alumno.nombre|lower }}">
+              <strong>{{ d.rol }}</strong> de
+              <a href="{{ url_for('alumnos.detalle', alumno_id=d.alumno_id) }}">{{ d.alumno.nombre }}</a>
+              — Cerrado {{ d.fecha_fin }}
+            </div>
+          {% endfor %}
+        </div>
+      {% endif %}
+    {% else %}
+      <p class="vacio">No dirige ni codirige a ningún alumno.</p>
+    {% endif %}
+  </div>
+
+  <div class="panel">
+    <h2>Comité Tutorial ({{ membresias|length }})</h2>
+    <p class="subtitulo">Alumnos en cuyo comité tutorial participa, vigentes e histórico.</p>
+    {% if membresias %}
+      <input type="text" id="filtro-comites" class="filtro-lista" placeholder="Buscar alumno por nombre...">
+      <table>
+        <thead><tr><th>Alumno</th><th>Ciclo</th><th>Estado</th></tr></thead>
+        <tbody id="lista-comites">
+          {% for m in membresias %}
+            <tr class="fila-lista-filtrable" data-nombre="{{ m.comite.alumno.nombre|lower }}">
+              <td><a href="{{ url_for('alumnos.detalle', alumno_id=m.comite.alumno_id) }}">{{ m.comite.alumno.nombre }}</a></td>
+              <td>{{ m.comite.ciclo or "—" }}</td>
+              <td>{% if m.comite.vigente %}<span class="badge badge-activo">Vigente</span>{% else %}<span class="badge">Cerrado {{ m.comite.fecha_fin }}</span>{% endif %}</td>
+            </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    {% else %}
+      <p class="vacio">No participa en ningún comité tutorial.</p>
+    {% endif %}
+  </div>
+
+  <script>
+    function activarFiltroLista(idInput, contenedores) {
+      var entrada = document.getElementById(idInput);
+      if (!entrada) return;
+      entrada.addEventListener("input", function () {
+        var texto = entrada.value.trim().toLowerCase();
+        contenedores.forEach(function (idContenedor) {
+          var contenedor = document.getElementById(idContenedor);
+          if (!contenedor) return;
+          contenedor.querySelectorAll(".fila-lista-filtrable").forEach(function (fila) {
+            var coincide = fila.dataset.nombre.indexOf(texto) !== -1;
+            fila.style.display = coincide ? "" : "none";
+          });
+        });
+      });
+    }
+    activarFiltroLista("filtro-direcciones", ["lista-direcciones-vigentes", "lista-direcciones-historico"]);
+    activarFiltroLista("filtro-comites", ["lista-comites"]);
+  </script>
+{% endblock %}

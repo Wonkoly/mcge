@@ -23,6 +23,9 @@
       </div>
       <nav>
         <a href="{{ url_for('core.inicio') }}" class="{{ 'activo' if request.endpoint == 'core.inicio' else '' }}">Panel</a>
+        <a href="{{ url_for('alumnos.listar') }}" class="{{ 'activo' if request.blueprint == 'alumnos' else '' }}">Alumnos</a>
+        <a href="{{ url_for('profesores.listar') }}" class="{{ 'activo' if request.blueprint == 'profesores' else '' }}">Profesores</a>
+        <a href="{{ url_for('actas.listar') }}" class="{{ 'activo' if request.blueprint == 'actas' else '' }}">Actas</a>
         <a href="{{ url_for('core.configuracion') }}" class="{{ 'activo' if request.blueprint == 'core' and request.endpoint != 'core.inicio' else '' }}">Configuración</a>
       </nav>
       <div class="sidebar-pie">
