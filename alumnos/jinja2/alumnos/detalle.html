@@ -81,6 +81,18 @@
         <ul class="lista-simple">
           {% for m in comite.miembros.all() %}<li>{{ m.profesor.nombre }}</li>{% endfor %}
         </ul>
+        <div class="acciones-form" style="margin-top:12px; flex-wrap:wrap;">
+          <form method="post" action="{{ url_for('documentos.oficio_comite_alumno', comite_id=comite.id) }}">
+            {{ csrf_input() }}
+            <button class="btn btn-pequeno" type="submit">Generar oficio para el alumno</button>
+          </form>
+          {% for m in comite.miembros.all() %}
+            <form method="post" action="{{ url_for('documentos.oficio_comite_docente', comite_id=comite.id, profesor_id=m.profesor_id) }}">
+              {{ csrf_input() }}
+              <button class="btn btn-pequeno btn-secundario" type="submit">Oficio para {{ m.profesor.nombre }}</button>
+            </form>
+          {% endfor %}
+        </div>
       {% else %}
         <p class="vacio">Sin comité tutorial asignado.</p>
       {% endif %}
