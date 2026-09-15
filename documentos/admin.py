@@ -1,3 +1,4 @@
-from django.contrib import admin
+from django.contrib import admin  # noqa: F401
 
-# Register your models here.
+# FolioSecuencia no se registra: Django admin todavía no soporta modelos
+# con clave primaria compuesta (ver documentos/models.py).
