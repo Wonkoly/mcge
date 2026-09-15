@@ -10,11 +10,16 @@ from pathlib import Path
 
 BASE_DIR = Path(__file__).resolve().parent.parent
 
-# Carpeta escribible: base de datos, respaldos, plantillas personalizadas.
-# En desarrollo coincide con el repo; en el host real puede apuntar a otra
-# ruta vía la variable de entorno MCG_DATA_DIR (p. ej. una carpeta compartida
-# solo para respaldos, nunca para la base de datos misma).
-DATA_DIR = Path(os.environ.get("MCG_DATA_DIR", BASE_DIR / "data"))
+# Raíz de lo escribible (base de datos, respaldos, plantillas
+# personalizadas) — mismo layout que tenía Flask (RAIZ_PROYECTO /
+# directorio_datos() en app/utils/rutas.py): data/, backups/ y
+# plantillas_personalizadas/ como hermanos del código, no anidados entre
+# sí. En desarrollo coincide con el repo; en el host real puede apuntar a
+# otra ruta vía la variable de entorno MCG_DATA_ROOT.
+MCG_ROOT = Path(os.environ.get("MCG_DATA_ROOT", BASE_DIR))
+DB_PATH = MCG_ROOT / "data" / "maestria.db"
+BACKUPS_DIR = MCG_ROOT / "backups"
+PLANTILLAS_DIR = MCG_ROOT / "plantillas_personalizadas"
 
 SECRET_KEY = os.environ.get(
     "DJANGO_SECRET_KEY",
@@ -98,7 +103,7 @@ WSGI_APPLICATION = "config.wsgi.application"
 DATABASES = {
     "default": {
         "ENGINE": "django.db.backends.sqlite3",
-        "NAME": DATA_DIR / "maestria.db",
+        "NAME": DB_PATH,
     }
 }
 

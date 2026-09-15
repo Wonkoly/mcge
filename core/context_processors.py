@@ -9,7 +9,7 @@ _CATEGORIA_POR_NIVEL = {
     messages.DEBUG: "info",
     messages.INFO: "info",
     messages.SUCCESS: "exito",
-    messages.WARNING: "error",
+    messages.WARNING: "aviso",
     messages.ERROR: "error",
 }
 

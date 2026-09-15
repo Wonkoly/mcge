@@ -1,0 +1,105 @@
+{% extends "base.html" %}
+{% block titulo %}Configuración{% endblock %}
+{% block contenido %}
+  <h1>Configuración</h1>
+  <p class="subtitulo">Ajustes generales de la app — un solo lugar para lo que antes se repetía en cada formulario.</p>
+
+  <div class="panel">
+    <h2>General</h2>
+    <form method="post" class="formulario">
+      {{ csrf_input() }}
+      <div class="campo">
+        <label>Coordinador(a) por defecto</label>
+        <input type="text" name="coordinador_nombre" value="{{ config.coordinador_nombre }}">
+        <p class="vacio" style="margin-top:4px;">Se precarga en todos los formularios de generación de documentos.</p>
+      </div>
+      <div class="campo">
+        <label>Ciclo escolar actual (dejar vacío para calcularlo solo por fecha)</label>
+        <input type="text" name="ciclo_escolar_actual" value="{{ config.ciclo_escolar_actual }}" placeholder="ej. 2026 B">
+      </div>
+      <div class="acciones-form">
+        <button class="btn" type="submit">Guardar</button>
+      </div>
+    </form>
+  </div>
+
+  {# Folios de oficios y constancias: se agrega en la Fase 6 (Documentos),
+     cuando exista el app `documentos` con FolioSecuencia portado. #}
+
+  <div class="panel">
+    <h2>Respaldos</h2>
+    <form method="post" class="formulario">
+      {{ csrf_input() }}
+      <div class="fila-campos">
+        <div class="campo">
+          <label>Carpeta de respaldos (dejar vacío para usar la carpeta local <code>backups/</code>)</label>
+          <input type="text" name="backup_carpeta_compartida" value="{{ config.backup_carpeta_compartida }}" placeholder="ej. \\PC-COORDINADOR\Compartida\backups">
+        </div>
+      </div>
+      <div class="fila-campos">
+        <div class="campo">
+          <label>Retención (días)</label>
+          <input type="number" name="backup_retencion_dias" value="{{ config.backup_retencion_dias }}">
+        </div>
+        <div class="campo">
+          <label>Respaldo automático cada (horas)</label>
+          <input type="number" step="0.5" name="backup_intervalo_horas" value="{{ config.backup_intervalo_horas }}">
+        </div>
+      </div>
+      <div class="acciones-form">
+        <button class="btn" type="submit">Guardar</button>
+      </div>
+    </form>
+
+    <hr style="border:none; border-top:1px solid var(--gris-borde); margin:20px 0;">
+
+    <form method="post" action="{{ url_for('core.generar_respaldo') }}" style="margin-bottom:16px;">
+      {{ csrf_input() }}
+      <button class="btn btn-secundario" type="submit">Generar respaldo ahora</button>
+    </form>
+
+    <h2>Respaldos disponibles ({{ respaldos|length }})</h2>
+    {% if respaldos %}
+      <table>
+        <thead><tr><th>Archivo</th><th>Fecha</th><th>Tamaño</th><th></th></tr></thead>
+        <tbody>
+          {% for r in respaldos %}
+            <tr>
+              <td>{{ r.nombre }}</td>
+              <td>{{ r.fecha.strftime("%Y-%m-%d %H:%M") }}</td>
+              <td>{{ r.tamano_kb }} KB</td>
+              <td>
+                <form method="post" action="{{ url_for('core.restaurar_respaldo') }}" class="form-restaurar" data-nombre="{{ r.nombre }}">
+                  {{ csrf_input() }}
+                  <input type="hidden" name="nombre" value="{{ r.nombre }}">
+                  <input type="hidden" name="confirmacion" class="campo-confirmacion" value="">
+                  <button class="btn btn-pequeno btn-secundario" type="submit">Restaurar</button>
+                </form>
+              </td>
+            </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    {% else %}
+      <p class="vacio">No hay respaldos todavía.</p>
+    {% endif %}
+  </div>
+
+  <script>
+    document.querySelectorAll(".form-restaurar").forEach(function (form) {
+      form.addEventListener("submit", function (evento) {
+        var nombre = form.dataset.nombre;
+        var escrito = prompt(
+          "Esto va a REEMPLAZAR la base de datos actual con este respaldo.\n" +
+          "Escribe exactamente el nombre del archivo para confirmar:\n" + nombre
+        );
+        if (escrito !== nombre) {
+          evento.preventDefault();
+          if (escrito !== null) alert("No coincide, no se restauró nada.");
+          return;
+        }
+        form.querySelector(".campo-confirmacion").value = escrito;
+      });
+    });
+  </script>
+{% endblock %}

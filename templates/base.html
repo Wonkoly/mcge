@@ -4,6 +4,10 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>{% block titulo %}MCG{% endblock %} — Maestría en Geofísica</title>
+  {# style.css: sistema de diseño propio (layout, tablas, formularios, paneles) que
+     cubre casi toda la app. app.css (Tailwind): componentes nuevos/rediseñados
+     (macros/ui.html). Conviven mientras dura la migración módulo por módulo. #}
+  <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
   <link rel="stylesheet" href="{{ url_for('static', filename='css/app.css') }}">
   <script src="{{ url_for('static', filename='js/htmx.min.js') }}"></script>
   {# Alpine.js: vendorizado local (como htmx), sin build — reactividad declarativa
@@ -19,6 +23,7 @@
       </div>
       <nav>
         <a href="{{ url_for('core.inicio') }}" class="{{ 'activo' if request.endpoint == 'core.inicio' else '' }}">Panel</a>
+        <a href="{{ url_for('core.configuracion') }}" class="{{ 'activo' if request.blueprint == 'core' and request.endpoint != 'core.inicio' else '' }}">Configuración</a>
       </nav>
       <div class="sidebar-pie">
         {% if user.is_authenticated %}
