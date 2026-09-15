@@ -95,6 +95,12 @@ def detalle(request, alumno_id):
     ciclo_vigente = ciclo_escolar_vigente()
     semestre = semestre_desde_ciclo(alumno.ciclo_ingreso, ciclo_vigente)
 
+    folio_sugerido_comite = None
+    if comite:
+        from documentos.folios import folio_sugerido
+
+        folio_sugerido_comite = folio_sugerido("oficio_comite_tutorial")
+
     return render(
         request,
         "alumnos/detalle.html",
@@ -103,6 +109,7 @@ def detalle(request, alumno_id):
             "semestre": semestre,
             "semestre_maximo": PROGRAMA_SEMESTRES,
             "comite": comite,
+            "folio_sugerido_comite": folio_sugerido_comite,
             "historial_comite": actas_queries.historial_comites(alumno_id),
             "director": director,
             "codirector": codirector,

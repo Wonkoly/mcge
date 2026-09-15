@@ -7,6 +7,7 @@ from core.models import Configuracion
 CLAVES_DEFAULT = {
     "coordinador_nombre": "Dr. Héctor Javier Rendón Contreras",
     "ciclo_escolar_actual": "",  # vacío = usar ciclo_actual() calculado por fecha
+    "lema_ciclo": "",  # lema institucional del año, ej. "2026, Guadalajara..." — vacío = no se imprime
     "backup_carpeta_compartida": "",  # vacío = usar backups/ local
     "backup_retencion_dias": "30",
     "backup_intervalo_horas": "4",

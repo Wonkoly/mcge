@@ -82,17 +82,32 @@
           {% for m in comite.miembros.all() %}<li>{{ m.profesor.nombre }}</li>{% endfor %}
         </ul>
         <div class="acciones-form" style="margin-top:12px; flex-wrap:wrap;">
-          <form method="post" action="{{ url_for('documentos.oficio_comite_alumno', comite_id=comite.id) }}">
+          <form method="post" action="{{ url_for('documentos.oficio_comite_alumno', comite_id=comite.id) }}" class="form-pide-folio">
             {{ csrf_input() }}
+            <input type="hidden" name="folio_numero" class="campo-folio-numero" value="">
             <button class="btn btn-pequeno" type="submit">Generar oficio para el alumno</button>
           </form>
           {% for m in comite.miembros.all() %}
-            <form method="post" action="{{ url_for('documentos.oficio_comite_docente', comite_id=comite.id, profesor_id=m.profesor_id) }}">
+            <form method="post" action="{{ url_for('documentos.oficio_comite_docente', comite_id=comite.id, profesor_id=m.profesor_id) }}" class="form-pide-folio">
               {{ csrf_input() }}
+              <input type="hidden" name="folio_numero" class="campo-folio-numero" value="">
               <button class="btn btn-pequeno btn-secundario" type="submit">Oficio para {{ m.profesor.nombre }}</button>
             </form>
           {% endfor %}
         </div>
+        <script>
+          document.querySelectorAll(".form-pide-folio").forEach(function (form) {
+            form.addEventListener("submit", function (evento) {
+              var escrito = prompt("¿Qué número de folio corresponde a este oficio?", "{{ folio_sugerido_comite }}");
+              if (!escrito || !/^\d+$/.test(escrito.trim())) {
+                evento.preventDefault();
+                if (escrito !== null) alert("Escribe solo el número de folio (sin letras ni símbolos) — no se generó el oficio.");
+                return;
+              }
+              form.querySelector(".campo-folio-numero").value = escrito.trim();
+            });
+          });
+        </script>
       {% else %}
         <p class="vacio">Sin comité tutorial asignado.</p>
       {% endif %}

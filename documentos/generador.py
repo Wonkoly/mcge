@@ -3,13 +3,12 @@ templates_docx/ — construidas editando los documentos reales del
 coordinador (ver documentos/texto.py y documentos/folios.py), nunca
 reconstruyendo el formato desde código."""
 
-from datetime import date
 from io import BytesIO
 from pathlib import Path
 
 from docxtpl import DocxTemplate
 
-from documentos import folios, texto
+from documentos import texto
 
 TEMPLATES_DIR = Path(__file__).resolve().parent / "templates_docx"
 
@@ -44,16 +43,22 @@ def _tres_tutores(miembros, excluir_profesor_id=None):
     return nombres[:tope]
 
 
-def generar_oficio_comite_tutorial_alumno(*, comite, coordinador_nombre: str, lema_ciclo: str = "") -> BytesIO:
-    """`comite` es un actas.models.ComiteTutorial con `.miembros` (hasta 3)."""
+def generar_oficio_comite_tutorial_alumno(*, comite, folio_numero: int, anio: int, coordinador_nombre: str, lema_ciclo: str = "") -> BytesIO:
+    """`comite` es un actas.models.ComiteTutorial con `.miembros` (hasta 3).
+    `folio_numero`/`anio` los fija quien llama (el usuario los confirma en
+    un prompt antes de generar — ver documentos/views.py y
+    documentos/folios.py:usar_folio)."""
     miembros = list(comite.miembros.select_related("profesor").all())
     tutor_1, tutor_2, tutor_3 = _tres_tutores(miembros)
-    anio = date.today().year
     contexto = {
-        "folio_numero": f"{folios.siguiente_folio('oficio_comite_tutorial', anio):03d}",
+        "folio_numero": f"{folio_numero:03d}",
         "anio": anio,
-        "alumno_nombre": texto.formatear_nombre(comite.alumno.nombre),
+        # Mayúsculas: el destinatario ya está en negritas en la propia
+        # plantilla (párrafo completo), aquí solo se pone el texto.
+        "alumno_nombre": comite.alumno.nombre.upper(),
         "alumno_codigo": comite.alumno.codigo,
+        # La plantilla ya trae en negritas solo el tramo {{ acta_numero }},
+        # el resto del párrafo alrededor queda normal.
         "acta_numero": comite.acta.numero if comite.acta else "",
         "acta_fecha_corta": texto.fecha_corta_sin_anio(comite.acta.fecha) if comite.acta and comite.acta.fecha else "",
         "tutor_1": tutor_1,
@@ -66,15 +71,16 @@ def generar_oficio_comite_tutorial_alumno(*, comite, coordinador_nombre: str, le
     return _render("oficio_comite_tutorial_alumno.docx", contexto)
 
 
-def generar_oficio_comite_tutorial_docente(*, comite, profesor_destinatario, coordinador_nombre: str, lema_ciclo: str = "") -> BytesIO:
+def generar_oficio_comite_tutorial_docente(*, comite, profesor_destinatario, folio_numero: int, anio: int, coordinador_nombre: str, lema_ciclo: str = "") -> BytesIO:
     """Una carta por cada miembro del comité — `profesor_destinatario` es a
     quien va dirigida esta copia; los otros 2 miembros van en el cuerpo."""
     miembros = list(comite.miembros.select_related("profesor").all())
     otro_1, otro_2 = _tres_tutores(miembros, excluir_profesor_id=profesor_destinatario.id)
-    anio = date.today().year
     contexto = {
-        "folio_numero": f"{folios.siguiente_folio('oficio_comite_tutorial', anio):03d}",
+        "folio_numero": f"{folio_numero:03d}",
         "anio": anio,
+        # Mayúsculas: el destinatario ya está en negritas en la propia
+        # plantilla (párrafo completo), aquí solo se pone el texto.
         "profesor_nombre_mayusculas": profesor_destinatario.nombre.upper(),
         "acta_numero": comite.acta.numero if comite.acta else "",
         "acta_fecha_corta": texto.fecha_corta_sin_anio(comite.acta.fecha) if comite.acta and comite.acta.fecha else "",
