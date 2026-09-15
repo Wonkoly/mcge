@@ -1,0 +1,23 @@
+{% extends "base.html" %}
+{% block titulo %}Aspirantes{% endblock %}
+{% block contenido %}
+  <h1>Aspirantes</h1>
+  <p class="subtitulo">Consulta de solo lectura por ahora — el alta y la máquina de estados (evaluación curricular, entrevista, aceptación) se agregan en su propia fase.</p>
+  <div class="panel">
+    <table>
+      <thead><tr><th>Nombre</th><th>Licenciatura</th><th>Ciclo</th><th>Estado</th></tr></thead>
+      <tbody>
+        {% for a in aspirantes %}
+          <tr>
+            <td>{{ a.nombre }}</td>
+            <td>{{ a.licenciatura or "—" }}</td>
+            <td>{{ a.ciclo or "—" }}</td>
+            <td>{{ a.estado }}</td>
+          </tr>
+        {% else %}
+          <tr><td colspan="4" class="vacio">Sin aspirantes en proceso.</td></tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+{% endblock %}

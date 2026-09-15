@@ -7,10 +7,6 @@ from core import configuracion
 from core.backup import crear_respaldo, listar_respaldos, restaurar_respaldo as _restaurar_respaldo
 
 
-def inicio(request):
-    return render(request, "core/inicio.html")
-
-
 def configuracion_view(request):
     if request.method == "POST":
         for clave in configuracion.CLAVES_DEFAULT:
