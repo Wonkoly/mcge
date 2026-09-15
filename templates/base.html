@@ -1,0 +1,62 @@
+<!doctype html>
+<html lang="es">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>{% block titulo %}MCG{% endblock %} — Maestría en Geofísica</title>
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/app.css') }}">
+  <script src="{{ url_for('static', filename='js/htmx.min.js') }}"></script>
+  {# Alpine.js: vendorizado local (como htmx), sin build — reactividad declarativa
+     para pantallas con más interacción (ej. el taller de plantillas en Documentos). #}
+  <script src="{{ url_for('static', filename='js/alpine.min.js') }}" defer></script>
+</head>
+<body>
+  <div class="app">
+    <aside class="sidebar">
+      <div class="marca">
+        <div class="marca-icono">MCG</div>
+        <div class="marca-texto">Gestión Académica</div>
+      </div>
+      <nav>
+        <a href="{{ url_for('core.inicio') }}" class="{{ 'activo' if request.endpoint == 'core.inicio' else '' }}">Panel</a>
+      </nav>
+      <div class="sidebar-pie">
+        {% if user.is_authenticated %}
+          {{ user.get_username() }} · <a href="{{ url_for('accounts.logout') }}">Salir</a><br>
+        {% endif %}
+        Maestría en Ciencias en Geofísica<br>CUC · Universidad de Guadalajara
+      </div>
+    </aside>
+
+    <main class="contenido">
+      {% with mensajes = get_flashed_messages(with_categories=true) %}
+        {% if mensajes %}
+          <div class="mensajes">
+            {% for categoria, mensaje in mensajes %}
+              <div class="mensaje mensaje-{{ categoria }}">{{ mensaje }}</div>
+            {% endfor %}
+          </div>
+        {% endif %}
+      {% endwith %}
+
+      {% block contenido %}{% endblock %}
+    </main>
+  </div>
+
+  <script>
+    document.addEventListener("click", function (evento) {
+      document.querySelectorAll("details.filtro-columna[open]").forEach(function (detalle) {
+        if (!detalle.contains(evento.target)) detalle.removeAttribute("open");
+      });
+    });
+
+    document.addEventListener("input", function (evento) {
+      if (!evento.target.classList.contains("filtro-panel-buscar")) return;
+      var texto = evento.target.value.trim().toLowerCase();
+      evento.target.closest(".filtro-panel").querySelectorAll("label[data-nombre]").forEach(function (etiqueta) {
+        etiqueta.style.display = etiqueta.dataset.nombre.indexOf(texto) !== -1 ? "" : "none";
+      });
+    });
+  </script>
+</body>
+</html>

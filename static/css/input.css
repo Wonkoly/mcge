@@ -1,0 +1,41 @@
+@import "tailwindcss";
+@source "../../templates";
+
+/* Fuente de verdad de los colores por status — se usan igual en el panel,
+   en las listas y en el expediente (Módulo 1.2). Cambiarlos aquí, no en
+   cada plantilla. Categorías = StatusAlumno.categoria en el modelo.
+   `static` para que SIEMPRE se generen como variables CSS aunque todavía
+   no se use la utilidad correspondiente en ninguna plantilla — si no,
+   Tailwind v4 las elimina por "no usadas" y las plantillas que se migren
+   después no las encuentran. */
+@theme static {
+  --color-brand-50: #eef2ff;
+  --color-brand-100: #e0e7ff;
+  --color-brand-500: #3b6ef6;
+  --color-brand-600: #2f5ee0;
+  --color-brand-700: #24365e;
+  --color-brand-900: #1b2a4a;
+
+  --color-status-activo: #1a8754;
+  --color-status-activo-bg: #e6f6ed;
+  --color-status-baja: #d64545;
+  --color-status-baja-bg: #fdeaea;
+  --color-status-proceso_titulacion: #b8860b;
+  --color-status-proceso_titulacion-bg: #fdf3dc;
+  --color-status-graduado: #3b6ef6;
+  --color-status-graduado-bg: #e8edfd;
+  --color-status-titulado: #3b6ef6;
+  --color-status-titulado-bg: #e8edfd;
+  --color-status-inactivo: #6b7280;
+  --color-status-inactivo-bg: #eef1f8;
+  --color-status-desconocido: #6b7280;
+  --color-status-desconocido-bg: #eef1f8;
+
+  --color-alerta-bg: #fdf3dc;
+  --color-alerta-borde: #f0dfa8;
+  --color-alerta-texto: #92600a;
+}
+
+/* Las plantillas que no se han migrado a Tailwind todavía siguen usando
+   style.css (se carga junto con este archivo en base.html) — la migración
+   es progresiva, módulo por módulo, no de un solo golpe. */

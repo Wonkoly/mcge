@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # Compila Tailwind con el binario standalone (sin Node/npm). El CSS
-# resultante (app/web/static/css/app.css) SÍ se versiona — es lo que se
+# resultante (static/css/app.css) SÍ se versiona — es lo que se
 # sirve en producción, no se recompila en las PCs de los usuarios.
 #
 # Uso:
@@ -23,4 +23,4 @@ if [ ! -x "$BIN" ]; then
   chmod +x "$BIN"
 fi
 
-"$BIN" -i app/web/static/css/input.css -o app/web/static/css/app.css "$@"
+"$BIN" -i static/css/input.css -o static/css/app.css "$@"
