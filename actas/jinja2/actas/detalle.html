@@ -3,7 +3,10 @@
 {% block contenido %}
   <div class="buscador-superior">
     <p style="margin:0;"><a href="{{ url_for('actas.listar') }}">&larr; Volver a actas</a></p>
-    <a href="{{ url_for('actas.editar', acta_id=acta.id) }}" class="btn btn-secundario btn-pequeno">Editar acta</a>
+    <div style="display:flex; gap:8px;">
+      <a href="{{ url_for('documentos.documento_acta', acta_id=acta.id) }}" class="btn btn-secundario btn-pequeno">Generar documento del acta</a>
+      <a href="{{ url_for('actas.editar', acta_id=acta.id) }}" class="btn btn-secundario btn-pequeno">Editar acta</a>
+    </div>
   </div>
   <h1>Acta {{ acta.numero }}</h1>
 
@@ -34,9 +37,60 @@
             {{ p.miembros.all() | map(attribute="profesor") | map(attribute="nombre") | join(", ") }}
           {% endif %}
         </div>
+
+        {% if p.tipo == "direccion" and p.direccion_id %}
+          <div class="punto-resumen-acciones">
+            <form method="post" action="{{ url_for('documentos.documento_direccion', direccion_id=p.direccion_id) }}">
+              {{ csrf_input() }}
+              <button class="btn btn-pequeno" type="submit" name="tipo" value="oficio">Generar oficio de asignación</button>
+            </form>
+            <form method="post" action="{{ url_for('documentos.documento_direccion', direccion_id=p.direccion_id) }}">
+              {{ csrf_input() }}
+              <button class="btn btn-pequeno btn-secundario" type="submit" name="tipo" value="constancia">Generar constancia</button>
+            </form>
+          </div>
+        {% elif p.tipo == "comite_tutorial" and p.comite_tutorial_id %}
+          <div class="punto-resumen-acciones" style="flex-wrap:wrap;">
+            <form method="post" action="{{ url_for('documentos.oficio_comite_alumno', comite_id=p.comite_tutorial_id) }}" class="form-pide-folio-comite">
+              {{ csrf_input() }}
+              <input type="hidden" name="folio_numero" class="campo-folio-numero" value="">
+              <button class="btn btn-pequeno" type="submit">Generar oficio para el alumno</button>
+            </form>
+            {% for m in p.miembros.all() %}
+              <form method="post" action="{{ url_for('documentos.oficio_comite_docente', comite_id=p.comite_tutorial_id, profesor_id=m.profesor_id) }}" class="form-pide-folio-comite">
+                {{ csrf_input() }}
+                <input type="hidden" name="folio_numero" class="campo-folio-numero" value="">
+                <button class="btn btn-pequeno btn-secundario" type="submit">Oficio para {{ m.profesor.nombre }}</button>
+              </form>
+            {% endfor %}
+          </div>
+        {% elif p.tipo == "personalizado" and p.tipo_documento_id %}
+          <div class="punto-resumen-acciones">
+            <form method="post" action="{{ url_for('documentos.documento_personalizado', punto_id=p.id) }}">
+              {{ csrf_input() }}
+              <button class="btn btn-pequeno" type="submit">Generar documento</button>
+            </form>
+          </div>
+        {% endif %}
       </div>
     {% else %}
       <p class="vacio">Esta acta todavía no tiene puntos capturados.</p>
     {% endfor %}
   </div>
+
+  <script>
+    document.querySelectorAll(".form-pide-folio-comite").forEach(function (form) {
+      form.addEventListener("submit", async function (evento) {
+        evento.preventDefault();
+        var numero = await window.pedirNumero({
+          titulo: "Número de folio",
+          mensaje: "¿Qué número de folio corresponde a este oficio?",
+          valorInicial: "{{ folio_sugerido_comite }}",
+        });
+        if (numero === null) return;
+        form.querySelector(".campo-folio-numero").value = numero;
+        form.submit();
+      });
+    });
+  </script>
 {% endblock %}

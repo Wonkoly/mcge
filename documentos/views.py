@@ -6,13 +6,18 @@ from django.http import HttpResponse
 from django.shortcuts import get_object_or_404, redirect, render
 from django.views.decorators.http import require_POST
 
-from actas.models import ComiteTutorial
+from actas.models import Acta, ComiteTutorial, Direccion, Lector, PuntoActa, Sinodal
 from core.configuracion import obtener as obtener_config
 from documentos import folios, generador, tipos
 from documentos.contexto import GRUPOS_VARIABLES, LISTAS_DISPONIBLES, ejemplos_variables, variables_libres
+from documentos.generador import CamposFaltantesError
 from documentos.models import PlantillaBase, TipoDocumentoPersonalizado
 from documentos.tipos import CATEGORIAS_VALIDAS, MoldeFaltanteError
 from profesores.models import Profesor
+
+
+def _coordinador_y_lema():
+    return obtener_config("coordinador_nombre"), (obtener_config("lema_ciclo") or "")
 
 
 def _descargar(buffer, nombre_archivo):
@@ -191,3 +196,86 @@ def tipos_confirmar(request, tipo_id):
     except MoldeFaltanteError as exc:
         messages.error(request, str(exc))
     return redirect("documentos:tipos_detalle", tipo_id=tipo.id)
+
+
+# --------------------------------------- Generación de oficios/constancias
+# (dirección, lector, sinodal, acta, personalizado) — a diferencia de los
+# de comité tutorial (arriba), estos SÍ usan un solo folio automático por
+# clic (siguiente_folio_formateado), no piden confirmar el número: cada
+# botón genera un documento distinto, no hace falta que varias cartas
+# compartan el mismo folio como pasa con comité tutorial (alumno + hasta 3
+# tutores deben llevar el mismo número).
+
+@require_POST
+def documento_direccion(request, direccion_id):
+    direccion = get_object_or_404(Direccion.objects.select_related("alumno", "profesor", "acta"), pk=direccion_id)
+    tipo = request.POST.get("tipo")
+    coordinador_nombre, lema_ciclo = _coordinador_y_lema()
+
+    if tipo == "oficio":
+        buffer = generador.generar_oficio_direccion(direccion=direccion, coordinador_nombre=coordinador_nombre, lema_ciclo=lema_ciclo)
+        nombre = _nombre_archivo(f"Oficio {direccion.rol} {direccion.alumno.nombre}")
+    elif tipo == "constancia":
+        buffer = generador.generar_constancia_direccion(direccion=direccion, coordinador_nombre=coordinador_nombre, lema_ciclo=lema_ciclo)
+        nombre = _nombre_archivo(f"Constancia {direccion.rol} {direccion.alumno.nombre}")
+    else:
+        messages.error(request, "Tipo de documento no reconocido.")
+        return redirect("alumnos:detalle", alumno_id=direccion.alumno_id)
+
+    return _descargar(buffer, nombre)
+
+
+@require_POST
+def documento_lector(request, lector_id):
+    lector = get_object_or_404(Lector.objects.select_related("alumno", "profesor"), pk=lector_id)
+    coordinador_nombre, lema_ciclo = _coordinador_y_lema()
+    buffer = generador.generar_constancia_lector(lector=lector, coordinador_nombre=coordinador_nombre, lema_ciclo=lema_ciclo)
+    return _descargar(buffer, _nombre_archivo(f"Constancia Lector {lector.profesor.nombre}"))
+
+
+@require_POST
+def documento_sinodal(request, sinodal_id):
+    sinodal = get_object_or_404(Sinodal.objects.select_related("alumno", "profesor", "acta"), pk=sinodal_id)
+    tipo = request.POST.get("tipo")
+    coordinador_nombre, lema_ciclo = _coordinador_y_lema()
+
+    if tipo == "constancia":
+        buffer = generador.generar_constancia_jurado(sinodal=sinodal, coordinador_nombre=coordinador_nombre, lema_ciclo=lema_ciclo)
+        nombre = _nombre_archivo(f"Constancia Jurado {sinodal.profesor.nombre}")
+    elif tipo == "invitacion":
+        buffer = generador.generar_oficio_invitacion_jurado(sinodal=sinodal, coordinador_nombre=coordinador_nombre, lema_ciclo=lema_ciclo)
+        nombre = _nombre_archivo(f"Oficio Invitacion Jurado {sinodal.profesor.nombre}")
+    else:
+        messages.error(request, "Tipo de documento no reconocido.")
+        return redirect("alumnos:detalle", alumno_id=sinodal.alumno_id)
+
+    return _descargar(buffer, nombre)
+
+
+def documento_acta(request, acta_id):
+    acta = get_object_or_404(Acta.objects.prefetch_related("puntos"), pk=acta_id)
+    coordinador_nombre, lema_ciclo = _coordinador_y_lema()
+    buffer = generador.generar_acta(acta=acta, coordinador_nombre=coordinador_nombre, lema_ciclo=lema_ciclo)
+    return _descargar(buffer, _nombre_archivo(f"Acta {acta.numero}"))
+
+
+@require_POST
+def documento_personalizado(request, punto_id):
+    punto = get_object_or_404(
+        PuntoActa.objects.select_related("alumno", "profesor", "acta", "direccion", "comite_tutorial", "tipo_documento")
+        .prefetch_related("miembros__profesor"),
+        pk=punto_id,
+    )
+    if punto.tipo_documento_id is None:
+        messages.error(request, "Este punto no tiene un tipo de documento personalizado asociado.")
+        return redirect("actas:detalle", acta_id=punto.acta_id)
+
+    coordinador_nombre, lema_ciclo = _coordinador_y_lema()
+    try:
+        buffer = generador.generar_documento_personalizado(
+            tipo_documento=punto.tipo_documento, punto=punto, coordinador_nombre=coordinador_nombre, lema_ciclo=lema_ciclo,
+        )
+    except CamposFaltantesError as exc:
+        messages.error(request, f"No se generó el documento — {exc}")
+        return redirect("actas:detalle", acta_id=punto.acta_id)
+    return _descargar(buffer, _nombre_archivo(f"{punto.tipo_documento.etiqueta} {punto.titulo}"))

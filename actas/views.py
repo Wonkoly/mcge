@@ -11,6 +11,7 @@ from actas.acta_service import NumeroDuplicadoError, TIPOS_PUNTO_INFO
 from actas.models import Acta
 from alumnos.models import Alumno
 from core.configuracion import ciclo_escolar_vigente
+from documentos.folios import folio_sugerido
 from documentos.models import TipoDocumentoPersonalizado
 from profesores.models import Profesor
 
@@ -34,7 +35,9 @@ def detalle(request, acta_id):
         ),
         pk=acta_id,
     )
-    return render(request, "actas/detalle.html", {"acta": acta})
+    return render(request, "actas/detalle.html", {
+        "acta": acta, "folio_sugerido_comite": folio_sugerido("oficio_comite_tutorial"),
+    })
 
 
 def buscar_alumno(request):

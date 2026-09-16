@@ -15,4 +15,9 @@ urlpatterns = [
     path("tipos/<int:tipo_id>/eliminar", views.tipos_eliminar, name="tipos_eliminar"),
     path("tipos/<int:tipo_id>/vista-previa", views.tipos_vista_previa, name="tipos_vista_previa"),
     path("tipos/<int:tipo_id>/confirmar", views.tipos_confirmar, name="tipos_confirmar"),
+    path("direccion/<int:direccion_id>", views.documento_direccion, name="documento_direccion"),
+    path("lector/<int:lector_id>", views.documento_lector, name="documento_lector"),
+    path("sinodal/<int:sinodal_id>", views.documento_sinodal, name="documento_sinodal"),
+    path("acta/<int:acta_id>", views.documento_acta, name="documento_acta"),
+    path("personalizado/<int:punto_id>", views.documento_personalizado, name="documento_personalizado"),
 ]

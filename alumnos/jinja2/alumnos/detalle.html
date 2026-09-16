@@ -115,7 +115,7 @@
       {% endif %}
     </div>
 
-    <p class="subtitulo">Los cambios de comité tutorial se hacen desde Actas, no aquí — esta pantalla es solo de consulta. El editor de actas se agrega en su propia fase.</p>
+    <p class="subtitulo">Los cambios de comité tutorial se hacen desde <a href="{{ url_for('actas.listar') }}">Actas</a>, no aquí — esta pantalla es solo de consulta.</p>
 
     <div class="panel">
       <h2>Historial</h2>
@@ -146,12 +146,36 @@
       <p>Director: <strong>{{ director.profesor.nombre if director else "—" }}</strong>
         {% if director %}{% if director.acta %} — acta <a href="{{ url_for('actas.detalle', acta_id=director.acta.id) }}">{{ director.acta.numero }}</a>{% if director.acta.fecha %} del {{ director.acta.fecha }}{% endif %}{% else %}<span style="color:var(--amarillo);"> ⚠ Sin acta vinculada</span>{% endif %}{% endif %}
       </p>
+      {% if director %}
+        <div class="acciones-form" style="margin:0 0 12px;">
+          <form method="post" action="{{ url_for('documentos.documento_direccion', direccion_id=director.id) }}">
+            {{ csrf_input() }}
+            <button class="btn btn-pequeno btn-secundario" type="submit" name="tipo" value="oficio">Generar oficio</button>
+          </form>
+          <form method="post" action="{{ url_for('documentos.documento_direccion', direccion_id=director.id) }}">
+            {{ csrf_input() }}
+            <button class="btn btn-pequeno btn-secundario" type="submit" name="tipo" value="constancia">Generar constancia</button>
+          </form>
+        </div>
+      {% endif %}
       <p>Codirector: <strong>{{ codirector.profesor.nombre if codirector else "—" }}</strong>
         {% if codirector %}{% if codirector.acta %} — acta <a href="{{ url_for('actas.detalle', acta_id=codirector.acta.id) }}">{{ codirector.acta.numero }}</a>{% if codirector.acta.fecha %} del {{ codirector.acta.fecha }}{% endif %}{% else %}<span style="color:var(--amarillo);"> ⚠ Sin acta vinculada</span>{% endif %}{% endif %}
       </p>
+      {% if codirector %}
+        <div class="acciones-form" style="margin:0;">
+          <form method="post" action="{{ url_for('documentos.documento_direccion', direccion_id=codirector.id) }}">
+            {{ csrf_input() }}
+            <button class="btn btn-pequeno btn-secundario" type="submit" name="tipo" value="oficio">Generar oficio</button>
+          </form>
+          <form method="post" action="{{ url_for('documentos.documento_direccion', direccion_id=codirector.id) }}">
+            {{ csrf_input() }}
+            <button class="btn btn-pequeno btn-secundario" type="submit" name="tipo" value="constancia">Generar constancia</button>
+          </form>
+        </div>
+      {% endif %}
     </div>
 
-    <p class="subtitulo">Los cambios de Director/Codirector se hacen desde Actas, no aquí — esta pantalla es solo de consulta. El editor de actas se agrega en su propia fase.</p>
+    <p class="subtitulo">Los cambios de Director/Codirector se hacen desde <a href="{{ url_for('actas.listar') }}">Actas</a>, no aquí — esta pantalla es solo de consulta.</p>
 
     <div class="panel">
       <h2>Historial</h2>
@@ -183,10 +207,16 @@
       {% for l in lectores %}
         <div style="display:flex; justify-content:space-between; align-items:center; padding:8px 0; border-bottom:1px solid var(--gris-borde);">
           <span>{{ l.profesor.nombre }}{% if l.fecha %} — {{ l.fecha }}{% endif %}</span>
-          <form method="post" action="{{ url_for('alumnos.quitar_lector_route', alumno_id=alumno.id, lector_id=l.id) }}" class="form-confirmar" data-mensaje="¿Quitar este lector?" data-boton="Quitar">
-            {{ csrf_input() }}
-            <button class="btn btn-pequeno btn-secundario" type="submit">Quitar</button>
-          </form>
+          <div style="display:flex; gap:6px;">
+            <form method="post" action="{{ url_for('documentos.documento_lector', lector_id=l.id) }}">
+              {{ csrf_input() }}
+              <button class="btn btn-pequeno btn-secundario" type="submit">Generar constancia</button>
+            </form>
+            <form method="post" action="{{ url_for('alumnos.quitar_lector_route', alumno_id=alumno.id, lector_id=l.id) }}" class="form-confirmar" data-mensaje="¿Quitar este lector?" data-boton="Quitar">
+              {{ csrf_input() }}
+              <button class="btn btn-pequeno btn-secundario" type="submit">Quitar</button>
+            </form>
+          </div>
         </div>
       {% else %}
         <p class="vacio">Sin lectores asignados.</p>
@@ -216,10 +246,22 @@
       {% for s in sinodales %}
         <div style="display:flex; justify-content:space-between; align-items:center; padding:8px 0; border-bottom:1px solid var(--gris-borde);">
           <span><strong>{{ s.cargo }}:</strong> {{ s.profesor.nombre }}{% if s.fecha_examen %} — examen {{ s.fecha_examen }}{% endif %}</span>
-          <form method="post" action="{{ url_for('alumnos.quitar_sinodal_route', alumno_id=alumno.id, sinodal_id=s.id) }}" class="form-confirmar" data-mensaje="¿Quitar este sinodal?" data-boton="Quitar">
-            {{ csrf_input() }}
-            <button class="btn btn-pequeno btn-secundario" type="submit">Quitar</button>
-          </form>
+          <div style="display:flex; gap:6px;">
+            <form method="post" action="{{ url_for('documentos.documento_sinodal', sinodal_id=s.id) }}">
+              {{ csrf_input() }}
+              <input type="hidden" name="tipo" value="invitacion">
+              <button class="btn btn-pequeno btn-secundario" type="submit">Oficio de invitación</button>
+            </form>
+            <form method="post" action="{{ url_for('documentos.documento_sinodal', sinodal_id=s.id) }}">
+              {{ csrf_input() }}
+              <input type="hidden" name="tipo" value="constancia">
+              <button class="btn btn-pequeno btn-secundario" type="submit">Constancia</button>
+            </form>
+            <form method="post" action="{{ url_for('alumnos.quitar_sinodal_route', alumno_id=alumno.id, sinodal_id=s.id) }}" class="form-confirmar" data-mensaje="¿Quitar este sinodal?" data-boton="Quitar">
+              {{ csrf_input() }}
+              <button class="btn btn-pequeno btn-secundario" type="submit">Quitar</button>
+            </form>
+          </div>
         </div>
       {% else %}
         <p class="vacio">Sin sinodales asignados.</p>

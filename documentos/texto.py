@@ -62,6 +62,19 @@ def es_femenino(profesor) -> bool:
     return es_femenino_texto(profesor.grado)
 
 
+def campos_rol(direccion) -> tuple[str, str, str]:
+    """(rol_texto_largo, rol_texto_corto, articulo_del_rol) a partir de un
+    Direccion — ej. ('Director', 'director', 'del') o
+    ('Codirectora', 'codirectora', 'de la'). Fuente única, reutilizada por
+    actas.acta_service (composición de título/resolutivo) y
+    documentos.generador (oficio/constancia de dirección)."""
+    femenino = es_femenino(direccion.profesor)
+    articulo = "de la" if femenino else "del"
+    if direccion.rol == "Director":
+        return ("Directora" if femenino else "Director"), ("directora" if femenino else "director"), articulo
+    return ("Codirectora" if femenino else "Codirector"), ("codirectora" if femenino else "codirector"), articulo
+
+
 def tratamiento_con_nombre(profesor, nombre: str) -> str:
     """'el Dr. Fulano' / 'la Dra. Fulana' / solo 'Fulano' si no se conoce el
     tratamiento. Usa el campo `tratamiento` (catálogo cerrado) si existe; si

@@ -183,13 +183,6 @@ def contexto_acta(acta) -> dict:
     }
 
 
-def _rol_texto_y_articulo(direccion) -> tuple[str, str]:
-    femenino = texto.es_femenino(direccion.profesor)
-    if direccion.rol == "Director":
-        return ("Directora" if femenino else "Director"), ("de la" if femenino else "del")
-    return ("Codirectora" if femenino else "Codirector"), ("de la" if femenino else "del")
-
-
 def contexto_direccion(direccion) -> dict:
     """`direccion` es el registro puntual sobre el que trata el punto (un
     Director *o* un Codirector) — se busca también al "hermano" vigente del
@@ -204,7 +197,7 @@ def contexto_direccion(direccion) -> dict:
     )
     director = direccion if direccion.rol == "Director" else hermano
     codirector = direccion if direccion.rol == "Codirector" else hermano
-    rol_texto, articulo = _rol_texto_y_articulo(direccion)
+    rol_texto, _, articulo = texto.campos_rol(direccion)
     return {
         "director_nombre": texto.nombre_con_tratamiento(director.profesor) if director else "",
         "codirector_nombre": texto.nombre_con_tratamiento(codirector.profesor) if codirector else "",

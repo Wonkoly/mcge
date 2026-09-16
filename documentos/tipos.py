@@ -58,7 +58,7 @@ def _slug(etiqueta: str) -> str:
     return re.sub(r"[^a-z0-9]+", "_", etiqueta.strip().lower()).strip("_") or "tipo"
 
 
-def _ruta_plantillas():
+def ruta_plantillas():
     ruta = settings.PLANTILLAS_DIR
     ruta.mkdir(parents=True, exist_ok=True)
     return ruta
@@ -112,7 +112,7 @@ def eliminar_tipo(tipo: TipoDocumentoPersonalizado, *, usuario: str = "usuario")
     nulo (el documento ya generado no se pierde, pero ya no se podrá
     regenerar desde ahí sin recrear el tipo)."""
     if tipo.plantilla_archivo:
-        (_ruta_plantillas() / tipo.plantilla_archivo).unlink(missing_ok=True)
+        (ruta_plantillas() / tipo.plantilla_archivo).unlink(missing_ok=True)
     registrar(usuario=usuario, entidad="TipoDocumentoPersonalizado", entidad_id=tipo.id, accion="eliminar", valor_anterior=tipo.etiqueta)
     tipo.delete()
 
@@ -134,7 +134,7 @@ def compilar_plantilla(tipo: TipoDocumentoPersonalizado) -> BytesIO:
             "súbelo primero en Documentos."
         )
 
-    ruta_molde = _ruta_plantillas() / molde.archivo
+    ruta_molde = ruta_plantillas() / molde.archivo
     doc = Document(str(ruta_molde))
     for linea in (tipo.cuerpo_texto or "").split("\n"):
         p = doc.add_paragraph()
@@ -168,7 +168,7 @@ def generar_vista_previa(tipo: TipoDocumentoPersonalizado) -> BytesIO:
 def confirmar_tipo(tipo: TipoDocumentoPersonalizado, *, usuario: str = "usuario") -> None:
     buffer = compilar_plantilla(tipo)
     nombre_archivo = f"{tipo.clave}.docx"
-    (_ruta_plantillas() / nombre_archivo).write_bytes(buffer.getvalue())
+    (ruta_plantillas() / nombre_archivo).write_bytes(buffer.getvalue())
     tipo.plantilla_archivo = nombre_archivo
     tipo.estado = "confirmado"
     tipo.save(update_fields=["plantilla_archivo", "estado", "actualizado_en"])
@@ -185,7 +185,7 @@ def guardar_molde_base(categoria: str, archivo, *, usuario: str = "usuario") -> 
         raise ValueError("El archivo debe ser un .docx")
 
     nombre_archivo = f"base_{categoria}.docx"
-    ruta = _ruta_plantillas() / nombre_archivo
+    ruta = ruta_plantillas() / nombre_archivo
     with open(ruta, "wb") as destino:
         for chunk in archivo.chunks():
             destino.write(chunk)

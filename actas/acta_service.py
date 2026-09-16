@@ -58,13 +58,6 @@ def _nombre_tratado(persona) -> str:
     return texto.tratamiento_con_nombre(persona, texto.formatear_nombre(persona.nombre))
 
 
-def _campos_rol(direccion) -> tuple[str, str]:
-    femenino = texto.es_femenino(direccion.profesor)
-    if direccion.rol == "Director":
-        return ("Directora" if femenino else "Director"), ("directora" if femenino else "director")
-    return ("Codirectora" if femenino else "Codirector"), ("codirectora" if femenino else "codirector")
-
-
 def _reemplazar_puntos(acta: Acta, puntos: list[dict], usuario: str) -> list[str]:
     """Reconstruye los puntos de `acta` a partir de lo que mandó el
     formulario. Para los tipos estructurados, dispara el alta real vía
@@ -110,7 +103,7 @@ def _reemplazar_puntos(acta: Acta, puntos: list[dict], usuario: str) -> list[str
                 if aviso:
                     avisos.append(aviso)
 
-            rol_texto_largo, rol_corto = _campos_rol(direccion)
+            rol_texto_largo, rol_corto, _ = texto.campos_rol(direccion)
             titulo = f"Asignación de {rol_texto_largo} de tesis a {texto.formatear_nombre(direccion.alumno.nombre)}"
             resolutivo = (
                 f"Se aprueba la designación de {_nombre_tratado(direccion.profesor)} "

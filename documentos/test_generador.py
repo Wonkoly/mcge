@@ -4,9 +4,10 @@ import docx
 import pytest
 from docxtpl import DocxTemplate
 
-from actas.models import Acta, ComiteMiembro, ComiteTutorial
+from actas.models import Acta, ComiteMiembro, ComiteTutorial, Direccion, Lector, PuntoActa, Sinodal
 from alumnos.models import Alumno
-from documentos import folios, generador
+from documentos import folios, generador, tipos
+from documentos.models import TipoDocumentoPersonalizado
 from profesores.models import Profesor
 
 
@@ -96,3 +97,96 @@ def test_usar_folio_nunca_baja_el_contador():
     folios.usar_folio("oficio_prueba_z", 10, 2026)
     folios.usar_folio("oficio_prueba_z", 3, 2026)  # alguien escribió un número menor por error
     assert folios.folio_sugerido("oficio_prueba_z", 2026) == 11
+
+
+@pytest.fixture
+def alumno_de_prueba():
+    return Alumno.objects.create(codigo="X2", nombre="LOPEZ TORRES ANA", tesis_titulo="Tesis de prueba")
+
+
+@pytest.fixture
+def profesor_de_prueba():
+    return Profesor.objects.create(nombre="Araceli Zamora Camacho", tratamiento="Doctora")
+
+
+@pytest.mark.django_db
+def test_generar_oficio_direccion_produce_docx_valido(alumno_de_prueba, profesor_de_prueba):
+    direccion = Direccion.objects.create(alumno=alumno_de_prueba, profesor=profesor_de_prueba, rol="Director", fecha_inicio=date(2026, 1, 1))
+    buffer = generador.generar_oficio_direccion(direccion=direccion, coordinador_nombre="Dr. Coordinador Prueba")
+    DocxTemplate(buffer)
+
+
+@pytest.mark.django_db
+def test_generar_constancia_direccion_produce_docx_valido(alumno_de_prueba, profesor_de_prueba):
+    direccion = Direccion.objects.create(alumno=alumno_de_prueba, profesor=profesor_de_prueba, rol="Codirector", fecha_inicio=date(2026, 1, 1))
+    buffer = generador.generar_constancia_direccion(direccion=direccion, coordinador_nombre="Dr. Coordinador Prueba")
+    DocxTemplate(buffer)
+
+
+@pytest.mark.django_db
+def test_generar_constancia_lector_produce_docx_valido(alumno_de_prueba, profesor_de_prueba):
+    lector = Lector.objects.create(alumno=alumno_de_prueba, profesor=profesor_de_prueba, fecha=date(2026, 1, 1))
+    buffer = generador.generar_constancia_lector(lector=lector, coordinador_nombre="Dr. X")
+    DocxTemplate(buffer)
+
+
+@pytest.mark.django_db
+def test_generar_constancia_y_oficio_invitacion_jurado_producen_docx_validos(alumno_de_prueba, profesor_de_prueba):
+    sinodal = Sinodal.objects.create(alumno=alumno_de_prueba, profesor=profesor_de_prueba, cargo="Presidente", fecha_examen=date(2026, 6, 1))
+    DocxTemplate(generador.generar_constancia_jurado(sinodal=sinodal, coordinador_nombre="Dr. X"))
+    DocxTemplate(generador.generar_oficio_invitacion_jurado(sinodal=sinodal, coordinador_nombre="Dr. X"))
+
+
+@pytest.mark.django_db
+def test_generar_acta_produce_docx_valido(alumno_de_prueba, profesor_de_prueba):
+    acta = Acta.objects.create(numero="MCG/9/2026", fecha=date(2026, 3, 1), anio=2026)
+    PuntoActa.objects.create(acta=acta, orden=1, tipo="otro", titulo="Punto de prueba", resolutivo="Se aprueba.")
+    buffer = generador.generar_acta(acta=acta, coordinador_nombre="Dr. X")
+    DocxTemplate(buffer)
+
+
+@pytest.mark.django_db
+def test_generar_documento_personalizado_sustituye_y_valida_campos(settings, tmp_path, alumno_de_prueba):
+    settings.PLANTILLAS_DIR = tmp_path
+    doc = docx.Document()
+    doc.add_paragraph("MEMBRETE")
+    doc.save(tmp_path / "base_oficio.docx")
+    from documentos.models import PlantillaBase
+
+    PlantillaBase.objects.create(categoria="oficio", archivo="base_oficio.docx")
+
+    tipo_documento = tipos.crear_tipo(etiqueta="Prueba Generador", categoria="oficio")
+    tipos.actualizar_cuerpo(tipo_documento, "Alumno: {{ alumno_nombre }} — {{ destinatario_nombre }}")
+    tipos.confirmar_tipo(tipo_documento)
+
+    acta = Acta.objects.create(numero="MCG/10/2026", anio=2026)
+    punto = PuntoActa.objects.create(
+        acta=acta, orden=1, tipo="personalizado", titulo="Prueba", alumno=alumno_de_prueba,
+        tipo_documento=tipo_documento, datos_json='{"destinatario_nombre": "Fulano"}',
+    )
+
+    buffer = generador.generar_documento_personalizado(tipo_documento=tipo_documento, punto=punto, coordinador_nombre="Dr. X")
+    texto_generado = "\n".join(p.text for p in docx.Document(buffer).paragraphs)
+    assert "LOPEZ TORRES ANA".title() in texto_generado or "Lopez Torres Ana" in texto_generado
+    assert "Fulano" in texto_generado
+
+
+@pytest.mark.django_db
+def test_generar_documento_personalizado_lanza_error_si_faltan_campos(settings, tmp_path, alumno_de_prueba):
+    settings.PLANTILLAS_DIR = tmp_path
+    doc = docx.Document()
+    doc.add_paragraph("MEMBRETE")
+    doc.save(tmp_path / "base_oficio.docx")
+    from documentos.models import PlantillaBase
+
+    PlantillaBase.objects.create(categoria="oficio", archivo="base_oficio.docx")
+
+    tipo_documento = tipos.crear_tipo(etiqueta="Prueba Faltante", categoria="oficio")
+    tipos.actualizar_cuerpo(tipo_documento, "Destinatario: {{ destinatario_nombre }}")
+    tipos.confirmar_tipo(tipo_documento)
+
+    acta = Acta.objects.create(numero="MCG/11/2026", anio=2026)
+    punto = PuntoActa.objects.create(acta=acta, orden=1, tipo="personalizado", titulo="Prueba", tipo_documento=tipo_documento)
+
+    with pytest.raises(generador.CamposFaltantesError):
+        generador.generar_documento_personalizado(tipo_documento=tipo_documento, punto=punto, coordinador_nombre="Dr. X")
