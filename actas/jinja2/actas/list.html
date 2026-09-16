@@ -1,8 +1,12 @@
 {% extends "base.html" %}
 {% block titulo %}Actas{% endblock %}
 {% block contenido %}
-  <h1>Actas de Junta Académica</h1>
-  <p class="subtitulo">Consulta de solo lectura por ahora — el editor completo de actas se agrega en su propia fase.</p>
+  <div class="buscador-superior">
+    <div>
+      <h1>Actas de Junta Académica</h1>
+    </div>
+    <a href="{{ url_for('actas.nuevo') }}" class="btn">+ Nueva acta</a>
+  </div>
   <div class="panel">
     <table>
       <thead><tr><th>Número</th><th>Fecha</th><th>Resumen</th></tr></thead>

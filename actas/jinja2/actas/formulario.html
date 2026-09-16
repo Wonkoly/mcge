@@ -1,0 +1,346 @@
+{% extends "base.html" %}
+{% block titulo %}{{ "Editar acta" if acta else "Nueva acta" }}{% endblock %}
+{% block contenido %}
+<div x-data="actaForm()">
+  <p><a href="{{ url_for('actas.detalle', acta_id=acta.id) if acta else url_for('actas.listar') }}">&larr; Volver</a></p>
+  <h1>{{ "Editar acta " ~ acta.numero if acta else "Nueva acta" }}</h1>
+
+  <form method="post" @submit="antesDeEnviar">
+    {{ csrf_input() }}
+    <div class="panel">
+      <h2>Datos generales</h2>
+      <div class="fila-campos">
+        <div class="campo"><label>Número *</label><input type="text" name="numero" value="{{ acta.numero if acta else '' }}" placeholder="ej. MCG/15/2026" required></div>
+        <div class="campo"><label>Fecha</label><input type="date" name="fecha" value="{{ acta.fecha|default('', true) }}"></div>
+      </div>
+      <div class="fila-campos">
+        <div class="campo"><label>Hora de inicio</label><input type="text" name="hora_inicio" value="{{ acta.hora_inicio or '' }}" placeholder="ej. 11:00"></div>
+        <div class="campo"><label>Hora de cierre</label><input type="text" name="hora_fin" value="{{ acta.hora_fin or '' }}" placeholder="ej. 13:00"></div>
+      </div>
+      <div class="fila-campos">
+        <div class="campo"><label>Lugar</label><input type="text" name="lugar" value="{{ acta.lugar if acta else 'Puerto Vallarta, Jalisco' }}"></div>
+        <div class="campo"><label>Sede</label><input type="text" name="sede" value="{{ acta.sede or '' }}" placeholder="ej. la biblioteca del edificio Centro Estudios de la Tierra"></div>
+      </div>
+      <div class="campo"><label>Asistentes</label><textarea name="asistentes" rows="2">{{ acta.asistentes or '' }}</textarea></div>
+      <div class="campo"><label>Resumen</label><input type="text" name="resumen" value="{{ acta.resumen or '' }}"></div>
+    </div>
+
+    <div class="panel">
+      <div class="buscador-superior" style="margin-bottom:12px;">
+        <h2 style="margin:0;">Orden del día</h2>
+        <button type="button" class="btn btn-pequeno" @click="modalTipoAbierto = true">+ Agregar punto</button>
+      </div>
+
+      <div id="puntos-container">
+        <template x-for="(punto, index) in puntos" :key="punto._key">
+          <div class="punto-resumen">
+            <div class="punto-resumen-texto">
+              <span class="punto-resumen-tipo" x-text="etiquetaTipo(punto)"></span> —
+              <span class="punto-resumen-detalle" x-text="resumenDe(punto)"></span>
+            </div>
+            <div class="punto-resumen-acciones">
+              <button type="button" class="btn btn-pequeno btn-secundario" @click="moverPunto(index, -1)" :disabled="index === 0">↑</button>
+              <button type="button" class="btn btn-pequeno btn-secundario" @click="moverPunto(index, 1)" :disabled="index === puntos.length - 1">↓</button>
+              <button type="button" class="btn btn-pequeno btn-secundario" @click="editarPunto(index)">Editar</button>
+              <button type="button" class="btn btn-pequeno btn-secundario" @click="quitarPunto(index)">Quitar</button>
+            </div>
+          </div>
+        </template>
+        <p class="vacio" x-show="puntos.length === 0">Todavía no hay puntos. Usa "+ Agregar punto".</p>
+      </div>
+    </div>
+
+    <div class="acciones-form">
+      <button class="btn" type="submit">{{ "Guardar cambios" if acta else "Crear acta" }}</button>
+      <a class="btn btn-secundario" href="{{ url_for('actas.detalle', acta_id=acta.id) if acta else url_for('actas.listar') }}">Cancelar</a>
+    </div>
+
+    <div x-ref="camposOcultos"></div>
+  </form>
+
+  {# Modal: elegir tipo de punto — reutiliza .modal-mcg/.tarjeta-tipo-punto,
+     ya definidos en style.css para esta pantalla. #}
+  <dialog class="modal-mcg" x-ref="modalTipo" @close="modalTipoAbierto = false"
+          x-effect="modalTipoAbierto ? $refs.modalTipo.showModal() : $refs.modalTipo.close()">
+    <div class="modal-mcg-cabecera">
+      <h2>Elegir tipo de punto</h2>
+      <button type="button" class="modal-mcg-cerrar" @click="modalTipoAbierto = false">&times;</button>
+    </div>
+    <div class="modal-mcg-cuerpo">
+      <div class="tarjetas-tipo-punto">
+        {% for clave, info in tipos_punto_info.items() %}
+          <button type="button" class="tarjeta-tipo-punto" @click="agregarPunto('{{ clave }}')">
+            <div class="tarjeta-tipo-titulo">{{ info.etiqueta }}</div>
+            <div class="tarjeta-tipo-desc">{{ info.descripcion }}</div>
+          </button>
+        {% endfor %}
+        {% for t in tipos_personalizados_confirmados %}
+          <button type="button" class="tarjeta-tipo-punto" @click="agregarPuntoPersonalizado({{ t.id }}, {{ t.etiqueta|tojson }})">
+            <div class="tarjeta-tipo-titulo">{{ t.etiqueta }}</div>
+            <div class="tarjeta-tipo-desc">{{ t.descripcion or "Documento personalizado del taller de plantillas." }}</div>
+          </button>
+        {% endfor %}
+      </div>
+    </div>
+  </dialog>
+
+  {# Modal: editar el punto recién agregado o uno existente. #}
+  <dialog class="modal-mcg" x-ref="modalEdicion" @close="cerrarEdicion()"
+          x-effect="modalEdicionAbierto ? $refs.modalEdicion.showModal() : $refs.modalEdicion.close()">
+    <template x-if="puntoEnEdicion">
+      <div>
+        <div class="modal-mcg-cabecera">
+          <h2 x-text="etiquetaTipo(puntoEnEdicion)"></h2>
+          <button type="button" class="modal-mcg-cerrar" @click="modalEdicionAbierto = false">&times;</button>
+        </div>
+        <div class="modal-mcg-cuerpo">
+          <template x-if="puntoEnEdicion.tipo === 'direccion'">
+            <div>
+              <div class="campo campo-autocompletar">
+                <label>Alumno</label>
+                <input type="text" x-model="puntoEnEdicion.alumno_texto" @input="onBuscarInput('alumno', $event.target.value, 'alumno_id')" placeholder="Buscar alumno...">
+                <div class="autocompletar-sugerencias" :style="resultadosAlumno.length ? 'display:block' : ''">
+                  <template x-for="r in resultadosAlumno" :key="r.id">
+                    <div class="autocompletar-opcion" @click="elegirAlumno(r)" x-text="r.texto"></div>
+                  </template>
+                </div>
+              </div>
+              <div class="campo campo-autocompletar" style="margin-top:12px;">
+                <label>Profesor</label>
+                <input type="text" x-model="puntoEnEdicion.profesor_texto" @input="onBuscarInput('profesor', $event.target.value, 'profesor_id')" placeholder="Buscar profesor...">
+                <div class="autocompletar-sugerencias" :style="resultadosProfesor.length ? 'display:block' : ''">
+                  <template x-for="r in resultadosProfesor" :key="r.id">
+                    <div class="autocompletar-opcion" @click="elegirProfesor(r)" x-text="r.texto"></div>
+                  </template>
+                </div>
+              </div>
+              <div class="campo" style="margin-top:12px;">
+                <label>Rol</label>
+                <select x-model="puntoEnEdicion.rol">
+                  <option value="Director">Director</option>
+                  <option value="Codirector">Codirector</option>
+                </select>
+              </div>
+            </div>
+          </template>
+
+          <template x-if="puntoEnEdicion.tipo === 'comite_tutorial'">
+            <div>
+              <div class="campo campo-autocompletar">
+                <label>Alumno</label>
+                <input type="text" x-model="puntoEnEdicion.alumno_texto" @input="onBuscarInput('alumno', $event.target.value, 'alumno_id')" placeholder="Buscar alumno...">
+                <div class="autocompletar-sugerencias" :style="resultadosAlumno.length ? 'display:block' : ''">
+                  <template x-for="r in resultadosAlumno" :key="r.id">
+                    <div class="autocompletar-opcion" @click="elegirAlumno(r)" x-text="r.texto"></div>
+                  </template>
+                </div>
+              </div>
+              <div class="campo" style="margin-top:12px;">
+                <label>Ciclo</label>
+                <input type="text" x-model="puntoEnEdicion.ciclo" placeholder="{{ ciclo_sugerido }}">
+              </div>
+              <div class="campo campo-autocompletar" style="margin-top:12px;">
+                <label>Agregar profesor al comité</label>
+                <input type="text" x-model="_buscandoMiembro" @input="onBuscarInput('miembro', $event.target.value, null)" placeholder="Buscar profesor...">
+                <div class="autocompletar-sugerencias" :style="resultadosMiembro.length ? 'display:block' : ''">
+                  <template x-for="r in resultadosMiembro" :key="r.id">
+                    <div class="autocompletar-opcion" @click="agregarMiembro(r)" x-text="r.texto"></div>
+                  </template>
+                </div>
+              </div>
+              <ul class="lista-simple" style="margin-top:8px;">
+                <template x-for="(m, mi) in puntoEnEdicion.miembros" :key="m.id">
+                  <li style="display:flex; justify-content:space-between; align-items:center;">
+                    <span x-text="m.texto"></span>
+                    <button type="button" class="btn btn-pequeno btn-secundario" @click="puntoEnEdicion.miembros.splice(mi, 1)">Quitar</button>
+                  </li>
+                </template>
+              </ul>
+            </div>
+          </template>
+
+          <template x-if="puntoEnEdicion.tipo === 'otro'">
+            <div>
+              <div class="campo"><label>Título (para el orden del día)</label><input type="text" x-model="puntoEnEdicion.titulo"></div>
+              <div class="campo" style="margin-top:12px;"><label>Resolutivo</label><textarea x-model="puntoEnEdicion.resolutivo" rows="4"></textarea></div>
+            </div>
+          </template>
+
+          <template x-if="puntoEnEdicion.tipo === 'personalizado'">
+            <div>
+              <p class="subtitulo" style="margin-bottom:12px;">Tipo de documento: <strong x-text="puntoEnEdicion.tipo_documento_etiqueta"></strong></p>
+              <div class="campo"><label>Título (para el orden del día)</label><input type="text" x-model="puntoEnEdicion.titulo"></div>
+              <div class="campo" style="margin-top:12px;"><label>Resolutivo</label><textarea x-model="puntoEnEdicion.resolutivo" rows="4"></textarea></div>
+              <p class="subtitulo" style="margin-top:12px;">El editor completo de datos (alumno/profesor/campos libres) para tipos personalizados se agrega en la siguiente fase — por ahora se conservan tal cual si ya venían capturados.</p>
+            </div>
+          </template>
+        </div>
+        <div class="modal-mcg-pie">
+          <button type="button" class="btn" @click="modalEdicionAbierto = false">Listo</button>
+        </div>
+      </div>
+    </template>
+  </dialog>
+</div>
+
+<script>
+  function actaForm() {
+    return {
+      puntos: {{ puntos_json | tojson }},
+      _contador: {{ puntos_json | length }},
+      _debounces: {},
+      modalTipoAbierto: false,
+      modalEdicionAbierto: false,
+      indiceEdicion: null,
+      resultadosAlumno: [], resultadosProfesor: [], resultadosMiembro: [],
+      _buscandoMiembro: "",
+
+      get puntoEnEdicion() {
+        return this.indiceEdicion === null ? null : this.puntos[this.indiceEdicion];
+      },
+
+      nuevaClave() {
+        this._contador += 1;
+        return "nuevo" + this._contador;
+      },
+
+      agregarPunto(tipo) {
+        this.puntos.push({
+          _key: this.nuevaClave(), punto_id: null, tipo: tipo,
+          alumno_id: null, alumno_texto: "", profesor_id: null, profesor_texto: "",
+          rol: "Director", ciclo: "{{ ciclo_sugerido }}", miembros: [],
+          titulo: "", resolutivo: "",
+          tipo_documento_id: null, tipo_documento_etiqueta: "", campos_libres: {},
+        });
+        this.modalTipoAbierto = false;
+        this.editarPunto(this.puntos.length - 1);
+      },
+
+      agregarPuntoPersonalizado(tipoDocumentoId, etiqueta) {
+        this.agregarPunto("personalizado");
+        var punto = this.puntos[this.puntos.length - 1];
+        punto.tipo_documento_id = tipoDocumentoId;
+        punto.tipo_documento_etiqueta = etiqueta;
+        punto.titulo = etiqueta;
+      },
+
+      editarPunto(index) {
+        this.indiceEdicion = index;
+        this.resultadosAlumno = []; this.resultadosProfesor = []; this.resultadosMiembro = [];
+        this.modalEdicionAbierto = true;
+      },
+
+      cerrarEdicion() {
+        this.modalEdicionAbierto = false;
+        this.indiceEdicion = null;
+      },
+
+      async quitarPunto(index) {
+        var ok = await window.confirmarAccion({
+          titulo: "Quitar punto", mensaje: "¿Quitar este punto del orden del día?", botonTexto: "Quitar",
+        });
+        if (ok) this.puntos.splice(index, 1);
+      },
+
+      moverPunto(index, delta) {
+        var destino = index + delta;
+        if (destino < 0 || destino >= this.puntos.length) return;
+        var tmp = this.puntos[index];
+        this.puntos[index] = this.puntos[destino];
+        this.puntos[destino] = tmp;
+      },
+
+      onBuscarInput(campo, valor, limpiarCampoId) {
+        if (limpiarCampoId) this.puntoEnEdicion[limpiarCampoId] = null;
+        var self = this;
+        clearTimeout(this._debounces[campo]);
+        this._debounces[campo] = setTimeout(function () { self.buscar(campo, valor); }, 300);
+      },
+
+      buscar(campo, texto) {
+        texto = (texto || "").trim();
+        var destino = { alumno: "resultadosAlumno", profesor: "resultadosProfesor", miembro: "resultadosMiembro" }[campo];
+        var url = campo === "profesor" || campo === "miembro" ? "{{ url_for('actas.buscar_profesor') }}" : "{{ url_for('actas.buscar_alumno') }}";
+        if (!texto) { this[destino] = []; return; }
+        var self = this;
+        fetch(url + "?q=" + encodeURIComponent(texto))
+          .then(function (r) { return r.json(); })
+          .then(function (datos) { self[destino] = datos; });
+      },
+
+      elegirAlumno(r) {
+        this.puntoEnEdicion.alumno_id = r.id;
+        this.puntoEnEdicion.alumno_texto = r.texto;
+        this.resultadosAlumno = [];
+      },
+      elegirProfesor(r) {
+        this.puntoEnEdicion.profesor_id = r.id;
+        this.puntoEnEdicion.profesor_texto = r.texto;
+        this.resultadosProfesor = [];
+      },
+      agregarMiembro(r) {
+        if (!this.puntoEnEdicion.miembros.some(function (m) { return m.id === r.id; })) {
+          this.puntoEnEdicion.miembros.push(r);
+        }
+        this._buscandoMiembro = "";
+        this.resultadosMiembro = [];
+      },
+
+      etiquetaTipo(punto) {
+        var etiquetas = {{ tipos_punto_info | tojson }};
+        if (punto.tipo === "personalizado") return punto.tipo_documento_etiqueta || "Personalizado";
+        return (etiquetas[punto.tipo] && etiquetas[punto.tipo].etiqueta) || punto.tipo;
+      },
+
+      resumenDe(punto) {
+        if (punto.tipo === "direccion") {
+          return (punto.rol || "—") + " de " + (punto.alumno_texto || "—") + " → " + (punto.profesor_texto || "—");
+        }
+        if (punto.tipo === "comite_tutorial") {
+          var nombres = punto.miembros.map(function (m) { return m.texto; }).join(", ");
+          return (punto.alumno_texto || "—") + (punto.ciclo ? " (" + punto.ciclo + ")" : "") + ": " + (nombres || "sin miembros");
+        }
+        return punto.titulo || "(sin título)";
+      },
+
+      antesDeEnviar() {
+        var contenedor = this.$refs.camposOcultos;
+        contenedor.innerHTML = "";
+        function campo(nombre, valor) {
+          var input = document.createElement("input");
+          input.type = "hidden";
+          input.name = nombre;
+          input.value = valor == null ? "" : valor;
+          contenedor.appendChild(input);
+        }
+        this.puntos.forEach(function (punto, i) {
+          campo("punto_tipo_" + i, punto.tipo);
+          campo("punto_id_" + i, punto.punto_id);
+          if (punto.tipo === "direccion") {
+            campo("punto_alumno_id_" + i, punto.alumno_id);
+            campo("punto_profesor_id_" + i, punto.profesor_id);
+            campo("punto_rol_" + i, punto.rol);
+          } else if (punto.tipo === "comite_tutorial") {
+            campo("punto_alumno_id_" + i, punto.alumno_id);
+            campo("punto_ciclo_" + i, punto.ciclo);
+            punto.miembros.forEach(function (m) { campo("punto_miembro_ids_" + i, m.id); });
+          } else if (punto.tipo === "personalizado") {
+            campo("punto_tipo_documento_id_" + i, punto.tipo_documento_id);
+            campo("punto_titulo_" + i, punto.titulo);
+            campo("punto_resolutivo_" + i, punto.resolutivo);
+            campo("punto_alumno_id_" + i, punto.alumno_id);
+            campo("punto_profesor_id_" + i, punto.profesor_id);
+            punto.miembros.forEach(function (m) { campo("punto_profesores_lista_" + i, m.id); });
+            Object.keys(punto.campos_libres || {}).forEach(function (clave) {
+              campo("punto_campo_" + i + "__" + clave, punto.campos_libres[clave]);
+            });
+          } else {
+            campo("punto_titulo_" + i, punto.titulo);
+            campo("punto_resolutivo_" + i, punto.resolutivo);
+          }
+        });
+      },
+    };
+  }
+</script>
+{% endblock %}

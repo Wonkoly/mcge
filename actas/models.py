@@ -151,3 +151,63 @@ class Sinodal(models.Model):
 
     def __str__(self):
         return f"{self.profesor} ({self.cargo}) - {self.alumno}"
+
+
+class PuntoActa(models.Model):
+    """Un punto del orden del día de un Acta, con su resolutivo. Desde que
+    un punto puede ser de un `tipo` estructurado (`direccion`,
+    `comite_tutorial`, `personalizado`) en vez de solo texto libre
+    (`otro`), guardar el Acta dispara el alta/cambio real en
+    Direccion/ComiteTutorial (ver actas/acta_service.py) —
+    `direccion_id`/`comite_tutorial_id` guardan el registro que ya se
+    creó, para no duplicar al reeditar el acta y para poder generar el
+    oficio directamente desde el detalle del Acta."""
+
+    TIPOS = (("direccion", "Dirección"), ("comite_tutorial", "Comité Tutorial"), ("personalizado", "Personalizado"), ("otro", "Otro"))
+
+    id = models.AutoField(primary_key=True)
+    acta = models.ForeignKey(Acta, on_delete=models.CASCADE, db_column="acta_id", related_name="puntos")
+    orden = models.IntegerField()
+    tipo = models.CharField(max_length=30, choices=TIPOS, default="otro")
+    titulo = models.CharField(max_length=300)
+    resolutivo = models.CharField(max_length=2000, null=True, blank=True)
+
+    # Campos estructurados — solo aplican según `tipo`.
+    alumno = models.ForeignKey(Alumno, null=True, blank=True, on_delete=models.SET_NULL, db_column="alumno_id")
+    profesor = models.ForeignKey(Profesor, null=True, blank=True, on_delete=models.SET_NULL, db_column="profesor_id")
+    rol = models.CharField(max_length=12, null=True, blank=True)  # tipo == "direccion"
+    ciclo = models.CharField(max_length=10, null=True, blank=True)  # tipo == "comite_tutorial"
+
+    # Registro real ya creado por este punto (se llena al guardar).
+    direccion = models.ForeignKey(Direccion, null=True, blank=True, on_delete=models.SET_NULL, db_column="direccion_id")
+    comite_tutorial = models.ForeignKey(ComiteTutorial, null=True, blank=True, on_delete=models.SET_NULL, db_column="comite_tutorial_id")
+
+    # tipo == "personalizado" (taller de plantillas).
+    tipo_documento = models.ForeignKey(
+        "documentos.TipoDocumentoPersonalizado", null=True, blank=True, on_delete=models.SET_NULL, db_column="tipo_documento_id",
+    )
+    datos_json = models.CharField(max_length=4000, null=True, blank=True)
+
+    class Meta:
+        db_table = "punto_acta"
+        ordering = ["orden"]
+
+    def __str__(self):
+        return f"{self.acta.numero} #{self.orden}: {self.titulo}"
+
+
+class PuntoActaMiembro(models.Model):
+    """Un profesor propuesto como miembro del comité tutorial (o marcado en
+    una lista de un punto personalizado) dentro de un punto de acta —
+    mismo patrón que ComiteMiembro, pero a nivel de punto, antes de que el
+    ComiteTutorial real exista."""
+
+    id = models.AutoField(primary_key=True)
+    punto = models.ForeignKey(PuntoActa, on_delete=models.CASCADE, db_column="punto_id", related_name="miembros")
+    profesor = models.ForeignKey(Profesor, on_delete=models.CASCADE, db_column="profesor_id")
+
+    class Meta:
+        db_table = "punto_acta_miembro"
+
+    def __str__(self):
+        return str(self.profesor)

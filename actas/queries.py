@@ -16,6 +16,13 @@ def direcciones_vigentes(alumno_id: int) -> list[Direccion]:
     return list(Direccion.objects.filter(alumno_id=alumno_id, fecha_fin__isnull=True).select_related("profesor", "acta"))
 
 
+def contar_dirigidos_activos(profesor_id: int) -> int:
+    """Alumnos con dirección/codirección VIGENTE de este profesor. Regla
+    oficial (≤4 estudiantes por profesor) — se muestra como aviso, no
+    como bloqueo duro (ver actas/direccion_service.py)."""
+    return Direccion.objects.filter(profesor_id=profesor_id, fecha_fin__isnull=True).count()
+
+
 def historial_direcciones(alumno_id: int) -> list[Direccion]:
     return list(
         Direccion.objects.filter(alumno_id=alumno_id)
