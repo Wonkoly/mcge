@@ -1,13 +1,17 @@
+import re
 from datetime import date
 
 from django.contrib import messages
 from django.http import HttpResponse
-from django.shortcuts import get_object_or_404, redirect
+from django.shortcuts import get_object_or_404, redirect, render
 from django.views.decorators.http import require_POST
 
 from actas.models import ComiteTutorial
 from core.configuracion import obtener as obtener_config
-from documentos import folios, generador
+from documentos import folios, generador, tipos
+from documentos.contexto import GRUPOS_VARIABLES, LISTAS_DISPONIBLES, ejemplos_variables, variables_libres
+from documentos.models import PlantillaBase, TipoDocumentoPersonalizado
+from documentos.tipos import CATEGORIAS_VALIDAS, MoldeFaltanteError
 from profesores.models import Profesor
 
 
@@ -18,6 +22,11 @@ def _descargar(buffer, nombre_archivo):
     )
     respuesta["Content-Disposition"] = f'attachment; filename="{nombre_archivo}"'
     return respuesta
+
+
+def _nombre_archivo(texto: str) -> str:
+    limpio = re.sub(r"[^\w\s-]", "", texto).strip()
+    return re.sub(r"\s+", "_", limpio) + ".docx"
 
 
 def _folio_numero_desde_form(request, alumno_id):
@@ -72,3 +81,113 @@ def oficio_comite_docente(request, comite_id, profesor_id):
     )
     nombre = f"Oficio comite tutorial - {profesor.nombre} - {comite.alumno.nombre.title()}.docx"
     return _descargar(buffer, nombre)
+
+
+# --------------------------------------------------------- Taller de plantillas
+
+def index(request):
+    todos = TipoDocumentoPersonalizado.objects.all()
+    moldes = {m.categoria: m for m in PlantillaBase.objects.all()}
+    return render(request, "documentos/index.html", {
+        "moldes": moldes,
+        "tipos_oficio": [t for t in todos if t.categoria == "oficio"],
+        "tipos_constancia": [t for t in todos if t.categoria == "constancia"],
+    })
+
+
+@require_POST
+def subir_molde(request, categoria):
+    if categoria not in CATEGORIAS_VALIDAS:
+        messages.error(request, "Categoría inválida.")
+        return redirect("documentos:index")
+    try:
+        tipos.guardar_molde_base(categoria, request.FILES.get("archivo"), usuario=request.user.get_username())
+        messages.success(request, f"Molde base de {categoria} actualizado.")
+    except ValueError as exc:
+        messages.error(request, str(exc))
+    return redirect("documentos:index")
+
+
+def tipos_nuevo(request):
+    if request.method == "POST":
+        try:
+            tipo = tipos.crear_tipo(
+                etiqueta=request.POST.get("etiqueta", ""),
+                categoria=request.POST.get("categoria", ""),
+                descripcion=request.POST.get("descripcion", ""),
+                usuario=request.user.get_username(),
+            )
+            return redirect("documentos:tipos_detalle", tipo_id=tipo.id)
+        except ValueError as exc:
+            messages.error(request, str(exc))
+    categoria_sugerida = request.GET.get("categoria", "oficio")
+    return render(request, "documentos/tipos_nuevo.html", {"categoria_sugerida": categoria_sugerida})
+
+
+def tipos_detalle(request, tipo_id):
+    tipo = get_object_or_404(TipoDocumentoPersonalizado, pk=tipo_id)
+
+    if request.method == "POST":
+        tipos.actualizar_cuerpo(tipo, request.POST.get("cuerpo_texto", ""), usuario=request.user.get_username())
+        messages.success(request, "Cuerpo guardado.")
+        return redirect("documentos:tipos_detalle", tipo_id=tipo.id)
+
+    ejemplos = ejemplos_variables()
+    variables_buscables = [
+        {"grupo": grupo, "clave": clave, "etiqueta": etiqueta, "ejemplo": str(ejemplos.get(clave, ""))}
+        for grupo, campos in GRUPOS_VARIABLES.items()
+        for clave, etiqueta in campos.items()
+    ]
+    listas_disponibles = [{"clave": clave, "etiqueta": etiqueta} for clave, etiqueta in LISTAS_DISPONIBLES.items()]
+
+    return render(request, "documentos/tipos_detalle.html", {
+        "tipo": tipo,
+        "molde": PlantillaBase.objects.filter(pk=tipo.categoria).first(),
+        "variables_buscables": variables_buscables,
+        "listas_disponibles": listas_disponibles,
+        "libres": variables_libres(tipo.cuerpo_texto or ""),
+    })
+
+
+@require_POST
+def tipos_editar(request, tipo_id):
+    tipo = get_object_or_404(TipoDocumentoPersonalizado, pk=tipo_id)
+    try:
+        tipos.actualizar_metadatos(
+            tipo, etiqueta=request.POST.get("etiqueta", ""), descripcion=request.POST.get("descripcion", ""),
+            usuario=request.user.get_username(),
+        )
+        messages.success(request, "Datos actualizados.")
+    except ValueError as exc:
+        messages.error(request, str(exc))
+    return redirect("documentos:tipos_detalle", tipo_id=tipo.id)
+
+
+@require_POST
+def tipos_eliminar(request, tipo_id):
+    tipo = get_object_or_404(TipoDocumentoPersonalizado, pk=tipo_id)
+    etiqueta = tipo.etiqueta
+    tipos.eliminar_tipo(tipo, usuario=request.user.get_username())
+    messages.success(request, f'"{etiqueta}" eliminado.')
+    return redirect("documentos:index")
+
+
+def tipos_vista_previa(request, tipo_id):
+    tipo = get_object_or_404(TipoDocumentoPersonalizado, pk=tipo_id)
+    try:
+        buffer = tipos.generar_vista_previa(tipo)
+    except MoldeFaltanteError as exc:
+        messages.error(request, str(exc))
+        return redirect("documentos:tipos_detalle", tipo_id=tipo.id)
+    return _descargar(buffer, _nombre_archivo(f"Vista previa {tipo.etiqueta}"))
+
+
+@require_POST
+def tipos_confirmar(request, tipo_id):
+    tipo = get_object_or_404(TipoDocumentoPersonalizado, pk=tipo_id)
+    try:
+        tipos.confirmar_tipo(tipo, usuario=request.user.get_username())
+        messages.success(request, f'"{tipo.etiqueta}" confirmado — ya aparece como opción en Actas.')
+    except MoldeFaltanteError as exc:
+        messages.error(request, str(exc))
+    return redirect("documentos:tipos_detalle", tipo_id=tipo.id)

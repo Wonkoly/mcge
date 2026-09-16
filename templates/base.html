@@ -26,6 +26,7 @@
         <a href="{{ url_for('alumnos.listar') }}" class="{{ 'activo' if request.blueprint == 'alumnos' else '' }}">Alumnos</a>
         <a href="{{ url_for('profesores.listar') }}" class="{{ 'activo' if request.blueprint == 'profesores' else '' }}">Profesores</a>
         <a href="{{ url_for('actas.listar') }}" class="{{ 'activo' if request.blueprint == 'actas' else '' }}">Actas</a>
+        <a href="{{ url_for('documentos.index') }}" class="{{ 'activo' if request.blueprint == 'documentos' else '' }}">Documentos</a>
         <a href="{{ url_for('core.configuracion') }}" class="{{ 'activo' if request.blueprint == 'core' else '' }}">Configuración</a>
       </nav>
       <div class="sidebar-pie">

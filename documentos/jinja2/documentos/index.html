@@ -1,0 +1,73 @@
+{% extends "base.html" %}
+{% block titulo %}Documentos{% endblock %}
+{% block contenido %}
+  <h1>Documentos</h1>
+  <p class="subtitulo">
+    Taller de plantillas: crea nuevos tipos de oficio/constancia, redáctalos aquí y úsalos desde
+    Actas. Los documentos del día a día (dirección, comité tutorial, lectores, sinodales) se
+    generan desde el expediente del alumno o el perfil de profesor, como siempre.
+  </p>
+
+  <div class="panel">
+    <h2>Moldes base</h2>
+    <p class="subtitulo">
+      Un .docx en blanco por categoría, con el membrete real (logos en encabezado y pie de
+      página) y nada más en el cuerpo. Sobre esto se construye cada tipo de documento nuevo — el
+      membrete nunca se toca, solo se le agrega el cuerpo que redactes.
+    </p>
+    <div class="moldes-grid">
+      {% for categoria, etiqueta in [("oficio", "Oficio"), ("constancia", "Constancia")] %}
+        {% set molde = moldes.get(categoria) %}
+        <div class="molde-tarjeta">
+          <p style="margin:0 0 8px; font-weight:600;">{{ etiqueta }}</p>
+          <p class="subtitulo" style="margin:0 0 10px;">
+            {% if molde and molde.archivo %}
+              <span class="badge badge-activo">Molde subido</span>
+            {% else %}
+              <span class="badge">Sin subir</span>
+            {% endif %}
+          </p>
+          <form method="post" action="{{ url_for('documentos.subir_molde', categoria=categoria) }}" enctype="multipart/form-data">
+            {{ csrf_input() }}
+            <input type="file" name="archivo" accept=".docx" required>
+            <div class="acciones-form" style="margin-top:10px;">
+              <button class="btn btn-pequeno" type="submit">{{ "Reemplazar" if molde and molde.archivo else "Subir" }}</button>
+            </div>
+          </form>
+        </div>
+      {% endfor %}
+    </div>
+  </div>
+
+  <div class="panel">
+    <div class="buscador-superior" style="margin-bottom:12px;">
+      <h2 style="margin:0;">Tipos de Oficio</h2>
+      <a href="{{ url_for('documentos.tipos_nuevo') }}?categoria=oficio" class="btn btn-pequeno">+ Nuevo tipo de Oficio</a>
+    </div>
+    <div class="tarjetas-tipos-documento">
+      {% for t in tipos_oficio %}
+        <a href="{{ url_for('documentos.tipos_detalle', tipo_id=t.id) }}" class="tarjeta-tipo-documento">
+          <span>{{ t.etiqueta }}</span>
+          <span class="badge {{ 'badge-activo' if t.estado == 'confirmado' else '' }}">{{ "Confirmado" if t.estado == "confirmado" else "Borrador" }}</span>
+        </a>
+      {% else %}
+        <p class="vacio">Todavía no hay tipos de oficio personalizados.</p>
+      {% endfor %}
+    </div>
+
+    <div class="buscador-superior" style="margin-bottom:12px; margin-top:24px;">
+      <h2 style="margin:0;">Tipos de Constancia</h2>
+      <a href="{{ url_for('documentos.tipos_nuevo') }}?categoria=constancia" class="btn btn-pequeno">+ Nuevo tipo de Constancia</a>
+    </div>
+    <div class="tarjetas-tipos-documento">
+      {% for t in tipos_constancia %}
+        <a href="{{ url_for('documentos.tipos_detalle', tipo_id=t.id) }}" class="tarjeta-tipo-documento">
+          <span>{{ t.etiqueta }}</span>
+          <span class="badge {{ 'badge-activo' if t.estado == 'confirmado' else '' }}">{{ "Confirmado" if t.estado == "confirmado" else "Borrador" }}</span>
+        </a>
+      {% else %}
+        <p class="vacio">Todavía no hay tipos de constancia personalizados.</p>
+      {% endfor %}
+    </div>
+  </div>
+{% endblock %}

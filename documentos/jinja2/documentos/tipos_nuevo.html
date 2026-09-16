@@ -1,0 +1,34 @@
+{% extends "base.html" %}
+{% block titulo %}Nuevo tipo de documento{% endblock %}
+{% block contenido %}
+  <p><a href="{{ url_for('documentos.index') }}">&larr; Volver a Documentos</a></p>
+  <h1>Nuevo tipo de documento</h1>
+  <p class="subtitulo">
+    Después de crearlo pasas al editor de cuerpo, donde redactas el texto e insertas los datos
+    (alumno, profesor, generales) que necesites. El membrete lo pone el molde base de la categoría
+    que elijas — no se toca aquí.
+  </p>
+
+  <form class="formulario" method="post" style="max-width:560px;">
+    {{ csrf_input() }}
+    <div class="campo">
+      <label>Nombre del tipo de documento *</label>
+      <input type="text" name="etiqueta" placeholder="ej. Cambio de Estatus" required>
+    </div>
+    <div class="campo">
+      <label>Categoría *</label>
+      <select name="categoria">
+        <option value="oficio" {{ "selected" if categoria_sugerida == "oficio" else "" }}>Oficio (numeración CUCPV/MCG/NNN/AAAA)</option>
+        <option value="constancia" {{ "selected" if categoria_sugerida == "constancia" else "" }}>Constancia (numeración MCG/NNN/AAAA)</option>
+      </select>
+    </div>
+    <div class="campo">
+      <label>Descripción (se muestra en la tarjeta al elegir tipo de punto en Actas)</label>
+      <input type="text" name="descripcion" placeholder="ej. Notifica el cambio de estatus de un alumno">
+    </div>
+    <div class="acciones-form">
+      <button class="btn" type="submit">Crear y pasar al editor</button>
+      <a class="btn btn-secundario" href="{{ url_for('documentos.index') }}">Cancelar</a>
+    </div>
+  </form>
+{% endblock %}
