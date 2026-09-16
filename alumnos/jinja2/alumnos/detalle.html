@@ -97,14 +97,16 @@
         </div>
         <script>
           document.querySelectorAll(".form-pide-folio").forEach(function (form) {
-            form.addEventListener("submit", function (evento) {
-              var escrito = prompt("¿Qué número de folio corresponde a este oficio?", "{{ folio_sugerido_comite }}");
-              if (!escrito || !/^\d+$/.test(escrito.trim())) {
-                evento.preventDefault();
-                if (escrito !== null) alert("Escribe solo el número de folio (sin letras ni símbolos) — no se generó el oficio.");
-                return;
-              }
-              form.querySelector(".campo-folio-numero").value = escrito.trim();
+            form.addEventListener("submit", async function (evento) {
+              evento.preventDefault();
+              var numero = await window.pedirNumero({
+                titulo: "Número de folio",
+                mensaje: "¿Qué número de folio corresponde a este oficio?",
+                valorInicial: "{{ folio_sugerido_comite }}",
+              });
+              if (numero === null) return;
+              form.querySelector(".campo-folio-numero").value = numero;
+              form.submit();
             });
           });
         </script>
@@ -181,7 +183,7 @@
       {% for l in lectores %}
         <div style="display:flex; justify-content:space-between; align-items:center; padding:8px 0; border-bottom:1px solid var(--gris-borde);">
           <span>{{ l.profesor.nombre }}{% if l.fecha %} — {{ l.fecha }}{% endif %}</span>
-          <form method="post" action="{{ url_for('alumnos.quitar_lector_route', alumno_id=alumno.id, lector_id=l.id) }}" onsubmit="return confirm('¿Quitar este lector?');">
+          <form method="post" action="{{ url_for('alumnos.quitar_lector_route', alumno_id=alumno.id, lector_id=l.id) }}" class="form-confirmar" data-mensaje="¿Quitar este lector?" data-boton="Quitar">
             {{ csrf_input() }}
             <button class="btn btn-pequeno btn-secundario" type="submit">Quitar</button>
           </form>
@@ -214,7 +216,7 @@
       {% for s in sinodales %}
         <div style="display:flex; justify-content:space-between; align-items:center; padding:8px 0; border-bottom:1px solid var(--gris-borde);">
           <span><strong>{{ s.cargo }}:</strong> {{ s.profesor.nombre }}{% if s.fecha_examen %} — examen {{ s.fecha_examen }}{% endif %}</span>
-          <form method="post" action="{{ url_for('alumnos.quitar_sinodal_route', alumno_id=alumno.id, sinodal_id=s.id) }}" onsubmit="return confirm('¿Quitar este sinodal?');">
+          <form method="post" action="{{ url_for('alumnos.quitar_sinodal_route', alumno_id=alumno.id, sinodal_id=s.id) }}" class="form-confirmar" data-mensaje="¿Quitar este sinodal?" data-boton="Quitar">
             {{ csrf_input() }}
             <button class="btn btn-pequeno btn-secundario" type="submit">Quitar</button>
           </form>

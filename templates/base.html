@@ -51,7 +51,126 @@
     </main>
   </div>
 
+  {# Diálogo global reutilizable: reemplaza prompt()/confirm() del navegador
+     (sin estilo propio, bloquean el flujo) por un <dialog> con la misma
+     apariencia del resto de la app. Tres modos: confirmar (solo sí/no),
+     numero (folio) y texto (escribir el nombre exacto para confirmar algo
+     destructivo, ej. restaurar respaldo). Un solo diálogo en todo el
+     documento, reutilizado por cualquier página vía window.pedirNumero /
+     window.pedirTextoConfirmado / window.confirmarAccion. #}
+  <dialog id="dialogo-global" class="modal-mcg">
+    <div class="modal-mcg-cabecera">
+      <h2 id="dg-titulo"></h2>
+      <button type="button" class="modal-mcg-cerrar" onclick="window._dialogoGlobal.cancelar()">&times;</button>
+    </div>
+    <div class="modal-mcg-cuerpo">
+      <p id="dg-mensaje" style="white-space: pre-line;"></p>
+      <div class="campo" id="dg-campo-entrada" style="display:none; margin-top:12px;">
+        <label id="dg-etiqueta-entrada"></label>
+        <input id="dg-entrada">
+        <p id="dg-error" style="display:none; color:var(--rojo); font-size:12px; margin:6px 0 0;"></p>
+      </div>
+    </div>
+    <div class="modal-mcg-pie">
+      <button type="button" class="btn btn-secundario btn-pequeno" onclick="window._dialogoGlobal.cancelar()">Cancelar</button>
+      <button type="button" class="btn btn-pequeno" id="dg-boton-confirmar" onclick="window._dialogoGlobal.confirmar()"></button>
+    </div>
+  </dialog>
+
   <script>
+    window._dialogoGlobal = (function () {
+      var el = document.getElementById("dialogo-global");
+      var mensajeEl = document.getElementById("dg-mensaje");
+      var campoEl = document.getElementById("dg-campo-entrada");
+      var etiquetaEl = document.getElementById("dg-etiqueta-entrada");
+      var entradaEl = document.getElementById("dg-entrada");
+      var errorEl = document.getElementById("dg-error");
+      var botonEl = document.getElementById("dg-boton-confirmar");
+      var resolver = null;
+      var modo = "confirmar";
+      var textoEsperado = null;
+
+      function mostrarError(texto) {
+        errorEl.textContent = texto;
+        errorEl.style.display = texto ? "" : "none";
+      }
+
+      function abrir(opciones) {
+        modo = opciones.modo || "confirmar";
+        textoEsperado = opciones.textoEsperado != null ? opciones.textoEsperado : null;
+        document.getElementById("dg-titulo").textContent = opciones.titulo || "Confirmar";
+        mensajeEl.textContent = opciones.mensaje || "";
+        mensajeEl.style.display = opciones.mensaje ? "" : "none";
+        campoEl.style.display = modo === "confirmar" ? "none" : "";
+        etiquetaEl.textContent = opciones.etiquetaEntrada || (modo === "numero" ? "Número de folio" : "Confirmación");
+        entradaEl.type = modo === "numero" ? "number" : "text";
+        entradaEl.min = modo === "numero" ? "1" : "";
+        entradaEl.value = opciones.valorInicial != null ? opciones.valorInicial : "";
+        mostrarError("");
+        botonEl.textContent = opciones.botonTexto || "Confirmar";
+        el.showModal();
+        if (modo !== "confirmar") setTimeout(function () { entradaEl.focus(); entradaEl.select(); }, 0);
+        return new Promise(function (r) { resolver = r; });
+      }
+
+      function confirmar() {
+        if (modo === "numero") {
+          var numero = parseInt(entradaEl.value, 10);
+          if (!entradaEl.value || isNaN(numero) || numero <= 0) {
+            mostrarError("Escribe solo el número de folio (sin letras ni símbolos).");
+            entradaEl.focus();
+            return;
+          }
+          cerrarCon(numero);
+        } else if (modo === "texto") {
+          if (textoEsperado !== null && entradaEl.value !== textoEsperado) {
+            mostrarError("No coincide con “" + textoEsperado + "”.");
+            entradaEl.focus();
+            return;
+          }
+          cerrarCon(entradaEl.value);
+        } else {
+          cerrarCon(true);
+        }
+      }
+
+      function cancelar() { cerrarCon(modo === "confirmar" ? false : null); }
+
+      function cerrarCon(valor) {
+        var r = resolver; resolver = null;
+        el.close();
+        if (r) r(valor);
+      }
+
+      el.addEventListener("cancel", function (e) { e.preventDefault(); cancelar(); });
+      return { abrir: abrir, confirmar: confirmar, cancelar: cancelar };
+    })();
+
+    window.pedirNumero = function (opciones) {
+      return window._dialogoGlobal.abrir(Object.assign({ modo: "numero" }, opciones));
+    };
+    window.pedirTextoConfirmado = function (opciones) {
+      return window._dialogoGlobal.abrir(Object.assign({ modo: "texto" }, opciones));
+    };
+    window.confirmarAccion = function (opciones) {
+      return window._dialogoGlobal.abrir(Object.assign({ modo: "confirmar" }, opciones));
+    };
+
+    // Cualquier <form class="form-confirmar" data-mensaje="..."> en toda la
+    // app pide confirmación en el diálogo global antes de enviarse — no
+    // hace falta JS por página, solo la clase y los data-* en el form.
+    document.addEventListener("submit", async function (evento) {
+      var form = evento.target;
+      if (!(form instanceof HTMLFormElement) || !form.classList.contains("form-confirmar")) return;
+      evento.preventDefault();
+      var ok = await window.confirmarAccion({
+        titulo: form.dataset.titulo || "Confirmar",
+        mensaje: form.dataset.mensaje || "¿Confirmas esta acción?",
+        botonTexto: form.dataset.boton || "Confirmar",
+      });
+      if (ok) form.submit();
+    });
+
     document.addEventListener("click", function (evento) {
       document.querySelectorAll("details.filtro-columna[open]").forEach(function (detalle) {
         if (!detalle.contains(evento.target)) detalle.removeAttribute("open");

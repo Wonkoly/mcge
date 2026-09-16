@@ -91,18 +91,19 @@
 
   <script>
     document.querySelectorAll(".form-restaurar").forEach(function (form) {
-      form.addEventListener("submit", function (evento) {
+      form.addEventListener("submit", async function (evento) {
+        evento.preventDefault();
         var nombre = form.dataset.nombre;
-        var escrito = prompt(
-          "Esto va a REEMPLAZAR la base de datos actual con este respaldo.\n" +
-          "Escribe exactamente el nombre del archivo para confirmar:\n" + nombre
-        );
-        if (escrito !== nombre) {
-          evento.preventDefault();
-          if (escrito !== null) alert("No coincide, no se restauró nada.");
-          return;
-        }
+        var escrito = await window.pedirTextoConfirmado({
+          titulo: "Restaurar respaldo",
+          mensaje: "Esto va a REEMPLAZAR la base de datos actual con este respaldo.\nEscribe exactamente el nombre del archivo para confirmar:\n" + nombre,
+          etiquetaEntrada: "Nombre del archivo",
+          textoEsperado: nombre,
+          botonTexto: "Restaurar",
+        });
+        if (escrito === null) return;
         form.querySelector(".campo-confirmacion").value = escrito;
+        form.submit();
       });
     });
   </script>

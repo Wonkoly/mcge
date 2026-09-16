@@ -1,4 +1,5 @@
 {% extends "base.html" %}
+{% import "macros/ui.html" as ui %}
 {% block titulo %}{{ profesor.nombre }}{% endblock %}
 {% block contenido %}
   <p><a href="{{ url_for('profesores.listar') }}">&larr; Volver a profesores</a></p>
@@ -63,7 +64,7 @@
             <div class="fila-lista-filtrable" data-nombre="{{ d.alumno.nombre|lower }}">
               <strong>{{ d.rol }}</strong> de
               <a href="{{ url_for('alumnos.detalle', alumno_id=d.alumno_id) }}">{{ d.alumno.nombre }}</a>
-              {% if d.alumno.status %}<span class="badge badge-{{ d.alumno.status.categoria }}">{{ d.alumno.status.nombre }}</span>{% endif %}
+              {{ ui.badge_status(d.alumno.status) }}
               {% if d.alumno.tesis_titulo %}<br><span style="color:var(--texto-suave);">“{{ d.alumno.tesis_titulo }}”</span>{% endif %}
             </div>
           {% endfor %}
