@@ -3,12 +3,18 @@ import pytest
 from actas import direccion_service
 from actas.models import Direccion
 from alumnos.models import Alumno
+from core.models import StatusAlumno
 from profesores.models import Profesor
 
 
 @pytest.fixture
-def alumno():
-    return Alumno.objects.create(codigo="X1", nombre="PEREZ GOMEZ JUAN")
+def status_activo():
+    return StatusAlumno.objects.create(codigo="AC", nombre="Activo", categoria="activo")
+
+
+@pytest.fixture
+def alumno(status_activo):
+    return Alumno.objects.create(codigo="X1", nombre="PEREZ GOMEZ JUAN", status=status_activo)
 
 
 @pytest.fixture
@@ -55,9 +61,18 @@ def test_rol_invalido_lanza_valueerror(alumno, profesor):
 
 
 @pytest.mark.django_db
-def test_aviso_al_superar_limite_de_alumnos(profesor):
+def test_aviso_al_superar_limite_de_alumnos(profesor, status_activo):
     for i in range(direccion_service.LIMITE_ALUMNOS_POR_PROFESOR + 1):
-        alumno = Alumno.objects.create(codigo=f"L{i}", nombre=f"ALUMNO {i}")
+        alumno = Alumno.objects.create(codigo=f"L{i}", nombre=f"ALUMNO {i}", status=status_activo)
         _, aviso = direccion_service.asignar_direccion(alumno_id=alumno.id, profesor_id=profesor.id, rol="Director")
     assert aviso is not None
     assert "máximo" in aviso
+
+
+@pytest.mark.django_db
+def test_alumno_titulado_no_cuenta_para_el_limite(profesor):
+    titulado = StatusAlumno.objects.create(codigo="TT", nombre="Titulado", categoria="titulado")
+    for i in range(direccion_service.LIMITE_ALUMNOS_POR_PROFESOR + 1):
+        alumno = Alumno.objects.create(codigo=f"T{i}", nombre=f"ALUMNO {i}", status=titulado)
+        _, aviso = direccion_service.asignar_direccion(alumno_id=alumno.id, profesor_id=profesor.id, rol="Director")
+    assert aviso is None

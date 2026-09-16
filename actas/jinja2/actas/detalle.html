@@ -3,10 +3,7 @@
 {% block contenido %}
   <div class="buscador-superior">
     <p style="margin:0;"><a href="{{ url_for('actas.listar') }}">&larr; Volver a actas</a></p>
-    <div style="display:flex; gap:8px;">
-      <a href="{{ url_for('documentos.documento_acta', acta_id=acta.id) }}" class="btn btn-secundario btn-pequeno">Generar documento del acta</a>
-      <a href="{{ url_for('actas.editar', acta_id=acta.id) }}" class="btn btn-secundario btn-pequeno">Editar acta</a>
-    </div>
+    <a href="{{ url_for('actas.editar', acta_id=acta.id) }}" class="btn btn-secundario btn-pequeno">Editar acta</a>
   </div>
   <h1>Acta {{ acta.numero }}</h1>
 

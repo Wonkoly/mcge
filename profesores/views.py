@@ -57,7 +57,10 @@ def detalle(request, profesor_id):
     profesor = get_object_or_404(Profesor, pk=profesor_id)
     direcciones = direcciones_de_profesor(profesor_id)
     membresias = membresias_de_profesor(profesor_id)
-    num_alumnos_vigentes = sum(1 for d in direcciones if d.vigente)
+    # Solo cuenta para el límite de carga los alumnos ACTIVOS — uno ya
+    # titulado/graduado sigue con Direccion.vigente=True (nadie la cierra al
+    # terminar) pero no debe pesar aquí (ver dashboard/services.py::alertas).
+    num_alumnos_vigentes = sum(1 for d in direcciones if d.vigente and d.alumno.status and d.alumno.status.categoria == "activo")
     return render(
         request,
         "profesores/detalle.html",

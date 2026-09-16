@@ -31,7 +31,13 @@
       </nav>
       <div class="sidebar-pie">
         {% if user.is_authenticated %}
-          {{ user.get_username() }} · <a href="{{ url_for('accounts.logout') }}">Salir</a><br>
+          {{ user.get_username() }} ·
+          {% if user.is_staff %}<a href="/admin/" target="_blank" title="Editar cualquier registro a mano">Admin</a> · {% endif %}
+          <form method="post" action="{{ url_for('accounts.logout') }}" style="display:inline;">
+            {{ csrf_input() }}
+            <button type="submit" class="enlace-como-texto">Salir</button>
+          </form>
+          <br>
         {% endif %}
         Maestría en Ciencias en Geofísica<br>CUC · Universidad de Guadalajara
       </div>

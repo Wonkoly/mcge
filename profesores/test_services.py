@@ -2,6 +2,7 @@ import pytest
 
 from actas.models import Direccion
 from alumnos.models import Alumno
+from core.models import StatusAlumno
 from profesores import services
 from profesores.models import Profesor
 
@@ -50,12 +51,24 @@ def test_resumen_direcciones_agrupa_por_rol_y_status_solo_vigentes():
 
 @pytest.mark.django_db
 def test_buscar_profesores_filtrado_cuenta_alumnos_vigentes():
+    status_activo = StatusAlumno.objects.create(codigo="AC", nombre="Activo", categoria="activo")
     profesor = Profesor.objects.create(nombre="Carlos Ruiz")
-    alumno = Alumno.objects.create(codigo="A3", nombre="Alumno Tres")
+    alumno = Alumno.objects.create(codigo="A3", nombre="Alumno Tres", status=status_activo)
     Direccion.objects.create(alumno=alumno, profesor=profesor, rol="Director")
 
     resultados = dict(services.buscar_profesores_filtrado())
     assert resultados[profesor] == 1
+
+
+@pytest.mark.django_db
+def test_buscar_profesores_filtrado_no_cuenta_alumnos_titulados():
+    titulado = StatusAlumno.objects.create(codigo="TT", nombre="Titulado", categoria="titulado")
+    profesor = Profesor.objects.create(nombre="Carlos Ruiz")
+    alumno = Alumno.objects.create(codigo="A4", nombre="Alumno Cuatro", status=titulado)
+    Direccion.objects.create(alumno=alumno, profesor=profesor, rol="Director")
+
+    resultados = dict(services.buscar_profesores_filtrado())
+    assert resultados[profesor] == 0
 
 
 @pytest.mark.django_db

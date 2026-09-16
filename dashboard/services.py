@@ -105,7 +105,13 @@ def alertas(ciclo_vigente: str) -> dict:
         key=lambda a: a.nombre,
     )
 
-    direcciones_vigentes = list(Direccion.objects.filter(fecha_fin__isnull=True).select_related("profesor"))
+    # Solo alumnos activos cuentan para la carga de un profesor — uno que ya
+    # se tituló/graduó sigue con Direccion.fecha_fin=NULL (nadie la cierra al
+    # terminar, solo al reasignar director) pero ya no debe pesar en el
+    # límite de "≤4 alumnos vigentes por profesor".
+    direcciones_vigentes = list(
+        Direccion.objects.filter(fecha_fin__isnull=True, alumno__status__categoria="activo").select_related("profesor")
+    )
 
     conteo_por_profesor = Counter(d.profesor_id for d in direcciones_vigentes)
     profesores_por_id = {d.profesor_id: d.profesor for d in direcciones_vigentes}

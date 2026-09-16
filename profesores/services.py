@@ -114,7 +114,7 @@ def _o_none(valor):
 
 # --- Módulo 3.1: filtrado combinable + ordenamiento + "número de alumnos a cargo" ---
 
-_VIGENTE = Q(direcciones__fecha_fin__isnull=True)
+_VIGENTE = Q(direcciones__fecha_fin__isnull=True, direcciones__alumno__status__categoria="activo")
 
 
 def buscar_profesores_filtrado(

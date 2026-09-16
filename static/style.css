@@ -64,6 +64,12 @@ body {
   line-height: 1.5;
   border-top: 1px solid rgba(255,255,255,0.08);
 }
+.sidebar-pie a { color: inherit; }
+.enlace-como-texto {
+  background: none; border: none; padding: 0; margin: 0; font: inherit; color: inherit;
+  cursor: pointer; text-decoration: none;
+}
+.enlace-como-texto:hover { text-decoration: underline; }
 
 /* --- Contenido --- */
 .contenido { flex: 1; padding: 32px 40px; max-width: 1200px; }
@@ -299,6 +305,10 @@ th .filtro-columna.filtro-activo .icono-filtro { color: var(--azul-acento); }
 .punto-resumen-acciones { display: flex; gap: 6px; flex-shrink: 0; }
 
 dialog.modal-mcg {
+  /* Centrado explícito: el reset de Tailwind (margin:0 en todo) anula el
+     `margin: auto` con el que el navegador centra un <dialog> por default,
+     así que sin esto quedaba pegado a la esquina superior izquierda. */
+  position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%); margin: 0;
   border: none; border-radius: 12px; padding: 0; max-width: 520px; width: 92vw;
   box-shadow: 0 12px 40px rgba(0,0,0,0.25);
 }

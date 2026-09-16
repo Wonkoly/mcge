@@ -57,6 +57,19 @@ def test_profesor_con_exceso_de_alumnos(activo):
 
 
 @pytest.mark.django_db
+def test_alumnos_titulados_no_cuentan_para_el_exceso_de_un_profesor(activo):
+    """Un alumno titulado sigue con Direccion.fecha_fin=NULL (nadie la
+    cierra al terminar) — no debe pesar en el límite de ≤4 por profesor."""
+    titulado = StatusAlumno.objects.create(codigo="TT", nombre="Titulado", categoria="titulado")
+    profesor = Profesor.objects.create(nombre="Con titulados")
+    for i in range(5):
+        alumno = Alumno.objects.create(codigo=f"D{i}", nombre=f"Titulado {i}", status=titulado)
+        Direccion.objects.create(alumno=alumno, profesor=profesor, rol="Director")
+    resultado = services.alertas("2026 B")
+    assert resultado["profesores_exceso"] == []
+
+
+@pytest.mark.django_db
 def test_director_con_alumno_rezagado_no_deberia_recibir_nuevos(activo):
     profesor = Profesor.objects.create(nombre="Con rezago")
     rezagado = Alumno.objects.create(codigo="C1", nombre="Rezagado", status=activo, ciclo_ingreso="2020 A")
