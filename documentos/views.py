@@ -7,13 +7,17 @@ from django.shortcuts import get_object_or_404, redirect, render
 from django.views.decorators.http import require_POST
 
 from actas.models import Acta, ComiteTutorial, Direccion, Lector, PuntoActa, Sinodal
+from core import configuracion as config
 from core.configuracion import obtener as obtener_config
 from documentos import folios, generador, tipos
-from documentos.contexto import GRUPOS_VARIABLES, LISTAS_DISPONIBLES, ejemplos_variables, variables_libres
+from documentos.contexto import GRUPOS_VARIABLES, LISTAS_DISPONIBLES, ejemplos_variables
 from documentos.generador import CamposFaltantesError
 from documentos.models import PlantillaBase, TipoDocumentoPersonalizado
-from documentos.tipos import CATEGORIAS_VALIDAS, MoldeFaltanteError
+from documentos.tipos import CATEGORIAS_VALIDAS, PlantillaFaltanteError
 from profesores.models import Profesor
+
+CLAVES_CONFIG_DOCUMENTOS = ("coordinador_nombre", "ciclo_escolar_actual", "lema_ciclo")
+EJEMPLO_PLANTILLA_ARCHIVO = "oficio_comite_tutorial_alumno.docx"
 
 
 def _coordinador_y_lema():
@@ -92,12 +96,38 @@ def oficio_comite_docente(request, comite_id, profesor_id):
 
 def index(request):
     todos = TipoDocumentoPersonalizado.objects.all()
+    if request.method == "POST":
+        for clave in CLAVES_CONFIG_DOCUMENTOS:
+            if clave in request.POST:
+                config.establecer(clave, request.POST.get(clave, "").strip())
+        messages.success(request, "Configuración guardada.")
+        return redirect("documentos:index")
+
     moldes = {m.categoria: m for m in PlantillaBase.objects.all()}
+    ejemplos = ejemplos_variables()
+    variables_buscables = [
+        {"grupo": grupo, "clave": clave, "etiqueta": etiqueta, "ejemplo": str(ejemplos.get(clave, ""))}
+        for grupo, campos in GRUPOS_VARIABLES.items()
+        for clave, etiqueta in campos.items()
+    ]
+    listas_disponibles = [{"clave": clave, "etiqueta": etiqueta} for clave, etiqueta in LISTAS_DISPONIBLES.items()]
     return render(request, "documentos/index.html", {
+        "config": {clave: obtener_config(clave) for clave in CLAVES_CONFIG_DOCUMENTOS},
         "moldes": moldes,
         "tipos_oficio": [t for t in todos if t.categoria == "oficio"],
         "tipos_constancia": [t for t in todos if t.categoria == "constancia"],
+        "variables_buscables": variables_buscables,
+        "listas_disponibles": listas_disponibles,
     })
+
+
+def plantilla_ejemplo(request):
+    """Descarga la plantilla de comité tutorial ya en uso (real, no
+    inventada) como ejemplo de cómo debe quedar un .docx preparado a
+    mano: membrete intacto + {{ variables }} escritas directo en el
+    cuerpo — la referencia que pide la documentación de abajo."""
+    ruta = generador.TEMPLATES_DIR / EJEMPLO_PLANTILLA_ARCHIVO
+    return _descargar(open(ruta, "rb"), EJEMPLO_PLANTILLA_ARCHIVO)
 
 
 @require_POST
@@ -120,8 +150,10 @@ def tipos_nuevo(request):
                 etiqueta=request.POST.get("etiqueta", ""),
                 categoria=request.POST.get("categoria", ""),
                 descripcion=request.POST.get("descripcion", ""),
+                archivo=request.FILES.get("archivo"),
                 usuario=request.user.get_username(),
             )
+            messages.success(request, f'"{tipo.etiqueta}" creado — ya aparece como opción en Actas.')
             return redirect("documentos:tipos_detalle", tipo_id=tipo.id)
         except ValueError as exc:
             messages.error(request, str(exc))
@@ -131,27 +163,18 @@ def tipos_nuevo(request):
 
 def tipos_detalle(request, tipo_id):
     tipo = get_object_or_404(TipoDocumentoPersonalizado, pk=tipo_id)
+    return render(request, "documentos/tipos_detalle.html", {"tipo": tipo})
 
-    if request.method == "POST":
-        tipos.actualizar_cuerpo(tipo, request.POST.get("cuerpo_texto", ""), usuario=request.user.get_username())
-        messages.success(request, "Cuerpo guardado.")
-        return redirect("documentos:tipos_detalle", tipo_id=tipo.id)
 
-    ejemplos = ejemplos_variables()
-    variables_buscables = [
-        {"grupo": grupo, "clave": clave, "etiqueta": etiqueta, "ejemplo": str(ejemplos.get(clave, ""))}
-        for grupo, campos in GRUPOS_VARIABLES.items()
-        for clave, etiqueta in campos.items()
-    ]
-    listas_disponibles = [{"clave": clave, "etiqueta": etiqueta} for clave, etiqueta in LISTAS_DISPONIBLES.items()]
-
-    return render(request, "documentos/tipos_detalle.html", {
-        "tipo": tipo,
-        "molde": PlantillaBase.objects.filter(pk=tipo.categoria).first(),
-        "variables_buscables": variables_buscables,
-        "listas_disponibles": listas_disponibles,
-        "libres": variables_libres(tipo.cuerpo_texto or ""),
-    })
+@require_POST
+def tipos_reemplazar(request, tipo_id):
+    tipo = get_object_or_404(TipoDocumentoPersonalizado, pk=tipo_id)
+    try:
+        tipos.reemplazar_plantilla(tipo, request.FILES.get("archivo"), usuario=request.user.get_username())
+        messages.success(request, "Plantilla reemplazada.")
+    except ValueError as exc:
+        messages.error(request, str(exc))
+    return redirect("documentos:tipos_detalle", tipo_id=tipo.id)
 
 
 @require_POST
@@ -181,21 +204,10 @@ def tipos_vista_previa(request, tipo_id):
     tipo = get_object_or_404(TipoDocumentoPersonalizado, pk=tipo_id)
     try:
         buffer = tipos.generar_vista_previa(tipo)
-    except MoldeFaltanteError as exc:
+    except PlantillaFaltanteError as exc:
         messages.error(request, str(exc))
         return redirect("documentos:tipos_detalle", tipo_id=tipo.id)
     return _descargar(buffer, _nombre_archivo(f"Vista previa {tipo.etiqueta}"))
-
-
-@require_POST
-def tipos_confirmar(request, tipo_id):
-    tipo = get_object_or_404(TipoDocumentoPersonalizado, pk=tipo_id)
-    try:
-        tipos.confirmar_tipo(tipo, usuario=request.user.get_username())
-        messages.success(request, f'"{tipo.etiqueta}" confirmado — ya aparece como opción en Actas.')
-    except MoldeFaltanteError as exc:
-        messages.error(request, str(exc))
-    return redirect("documentos:tipos_detalle", tipo_id=tipo.id)
 
 
 # --------------------------------------- Generación de oficios/constancias

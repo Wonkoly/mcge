@@ -8,12 +8,10 @@ un punto "personalizado" de Acta (`documentos.generador.
 generar_documento_personalizado`, Fase 3.2) — un solo catálogo, no dos
 desincronizados como en Flask.
 
-Cualquier otra variable que aparezca en el cuerpo y no esté en
-TODAS_LAS_VARIABLES (ej. destinatario_nombre) se detecta sola por texto
-(ver variables_libres) y se pide como campo libre al generar el documento
-real — no hace falta declararla aquí."""
-
-import re
+Cualquier otra variable que aparezca en la plantilla y no esté en
+TODAS_LAS_VARIABLES (ej. destinatario_nombre) se pide como campo libre al
+generar el documento real (ver documentos.generador) — no hace falta
+declararla aquí."""
 
 from documentos import texto
 
@@ -116,21 +114,6 @@ LISTAS_DISPONIBLES = {
     "comite_miembros": "Miembros del comité tutorial de la fuente",
     "sinodales_lista": "Sinodales asignados al alumno de la fuente",
 }
-
-_PATRON_VARIABLE = re.compile(r"\{\{\s*(\w+)\s*\}\}")
-
-
-def variables_libres(cuerpo_texto: str) -> list[str]:
-    """Variables que aparecen en el cuerpo pero no son del catálogo fijo —
-    ej. destinatario_nombre. Se piden como campo de texto libre al generar
-    un documento real."""
-    encontradas = dict.fromkeys(_PATRON_VARIABLE.findall(cuerpo_texto or ""))  # preserva orden, sin duplicados
-    return [v for v in encontradas if v not in TODAS_LAS_VARIABLES]
-
-
-def variables_usadas(cuerpo_texto: str) -> set[str]:
-    return set(_PATRON_VARIABLE.findall(cuerpo_texto or ""))
-
 
 # --------------------------------------------------------- Context builders
 # Cada función arma el grupo de variables a partir del registro real

@@ -258,19 +258,23 @@ def generar_documento_personalizado(*, tipo_documento, punto, coordinador_nombre
         "lema_ciclo": lema_ciclo,
     })
 
-    variables_usadas = ctx.variables_usadas(tipo_documento.cuerpo_texto or "")
-    faltantes = sorted(
-        v for v in variables_usadas
-        if v != "lema_ciclo" and not str(contexto.get(v, "")).strip()
-    )
-    if "profesores_lista" in (tipo_documento.cuerpo_texto or "") and not contexto.get("profesores_lista"):
-        faltantes.append("profesores_lista (no se marcó ningún profesor)")
-    if faltantes:
-        raise CamposFaltantesError(faltantes)
-
     from documentos.tipos import ruta_plantillas
 
     tpl = DocxTemplate(str(ruta_plantillas() / tipo_documento.plantilla_archivo))
+    # Las plantillas ahora se preparan enteras en Word y se suben ya
+    # terminadas — ya no hay un cuerpo_texto guardado aparte del que se
+    # pueda escanear con el regex de {{ }}. get_undeclared_template_variables()
+    # lee directo del .docx real (vía el AST de Jinja2), así que detecta
+    # también las variables usadas dentro de un {% for %} (ej.
+    # profesores_lista) sin necesitar un caso especial para eso.
+    variables_usadas = tpl.get_undeclared_template_variables()
+    faltantes = sorted(
+        v for v in variables_usadas
+        if v != "lema_ciclo" and not contexto.get(v)
+    )
+    if faltantes:
+        raise CamposFaltantesError(faltantes)
+
     tpl.render(contexto)
     buffer = BytesIO()
     tpl.save(buffer)

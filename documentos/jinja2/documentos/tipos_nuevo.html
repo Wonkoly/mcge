@@ -4,12 +4,13 @@
   <p><a href="{{ url_for('documentos.index') }}">&larr; Volver a Documentos</a></p>
   <h1>Nuevo tipo de documento</h1>
   <p class="subtitulo">
-    Después de crearlo pasas al editor de cuerpo, donde redactas el texto e insertas los datos
-    (alumno, profesor, generales) que necesites. El membrete lo pone el molde base de la categoría
-    que elijas — no se toca aquí.
+    Sube el .docx ya preparado en Word (membrete + cuerpo + <code>{{ '{{ variables }}' }}</code> escritas
+    directo en el texto) — la app no lo modifica, solo lo guarda y lo usa para generar documentos reales.
+    Revisa el catálogo de variables y la plantilla de ejemplo en <a href="{{ url_for('documentos.index') }}">Documentos</a>
+    antes de prepararlo.
   </p>
 
-  <form class="formulario" method="post" style="max-width:560px;">
+  <form class="formulario" method="post" enctype="multipart/form-data" style="max-width:560px;">
     {{ csrf_input() }}
     <div class="campo">
       <label>Nombre del tipo de documento *</label>
@@ -26,8 +27,12 @@
       <label>Descripción (se muestra en la tarjeta al elegir tipo de punto en Actas)</label>
       <input type="text" name="descripcion" placeholder="ej. Notifica el cambio de estatus de un alumno">
     </div>
+    <div class="campo">
+      <label>Documento de Word ya preparado (.docx) *</label>
+      <input type="file" name="archivo" accept=".docx" required>
+    </div>
     <div class="acciones-form">
-      <button class="btn" type="submit">Crear y pasar al editor</button>
+      <button class="btn" type="submit">Crear</button>
       <a class="btn btn-secundario" href="{{ url_for('documentos.index') }}">Cancelar</a>
     </div>
   </form>

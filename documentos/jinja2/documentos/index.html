@@ -3,17 +3,39 @@
 {% block contenido %}
   <h1>Documentos</h1>
   <p class="subtitulo">
-    Taller de plantillas: crea nuevos tipos de oficio/constancia, redáctalos aquí y úsalos desde
-    Actas. Los documentos del día a día (dirección, comité tutorial, lectores, sinodales) se
-    generan desde el expediente del alumno o el perfil de profesor, como siempre.
+    Tipos de oficio/constancia nuevos: prepáralos enteros en Word (membrete + cuerpo +
+    <code>{{ '{{ variables }}' }}</code>) y súbelos aquí — la app no los edita, solo los usa para generar.
+    Los documentos del día a día (dirección, comité tutorial, lectores, sinodales) se generan desde el
+    expediente del alumno o el perfil de profesor, como siempre.
   </p>
+
+  <div class="panel">
+    <h2>Configuración de documentos</h2>
+    <p class="subtitulo">Se precargan en todos los documentos generados por la app.</p>
+    <form method="post" class="formulario" style="max-width:560px;">
+      {{ csrf_input() }}
+      <div class="campo">
+        <label>Coordinador(a) por defecto</label>
+        <input type="text" name="coordinador_nombre" value="{{ config.coordinador_nombre }}">
+      </div>
+      <div class="campo">
+        <label>Ciclo escolar actual (dejar vacío para calcularlo solo por fecha)</label>
+        <input type="text" name="ciclo_escolar_actual" value="{{ config.ciclo_escolar_actual }}" placeholder="ej. 2026 B">
+        <p class="vacio" style="margin-top:4px;">También lo usa el Panel para calcular el semestre de cada alumno.</p>
+      </div>
+      <div class="campo">
+        <label>Lema institucional del año (dejar vacío para no imprimirlo en los oficios)</label>
+        <input type="text" name="lema_ciclo" value="{{ config.lema_ciclo }}" placeholder='ej. "2026, Guadalajara, hogar de la Feria Internacional del Libro..."'>
+      </div>
+      <div class="acciones-form"><button class="btn btn-pequeno" type="submit">Guardar</button></div>
+    </form>
+  </div>
 
   <div class="panel">
     <h2>Moldes base</h2>
     <p class="subtitulo">
       Un .docx en blanco por categoría, con el membrete real (logos en encabezado y pie de
-      página) y nada más en el cuerpo. Sobre esto se construye cada tipo de documento nuevo — el
-      membrete nunca se toca, solo se le agrega el cuerpo que redactes.
+      página) y nada más en el cuerpo — de referencia para saber cómo se ve el membrete vigente.
     </p>
     <div class="moldes-grid">
       {% for categoria, etiqueta in [("oficio", "Oficio"), ("constancia", "Constancia")] %}
@@ -70,4 +92,68 @@
       {% endfor %}
     </div>
   </div>
+
+  <div class="panel" id="catalogo-variables">
+    <h2>Cómo preparar una plantilla nueva</h2>
+    <p class="subtitulo">
+      Escribe el documento completo en Word: membrete, cuerpo y las variables donde correspondan, con
+      dos llaves alrededor exactas del nombre — <code>{{ '{{ alumno_nombre }}' }}</code>. Guarda como
+      .docx y súbelo en "+ Nuevo tipo". Para una lista de varios profesores (ej. todo el comité
+      tutorial), usa un bucle:
+      <code>{{ '{% for p in comite_miembros %}' }} {{ '{{ p.nombre }}' }} {{ '{% endfor %}' }}</code>.
+    </p>
+    <p class="subtitulo" style="margin-bottom:16px;">
+      ¿No sabes cómo se ve una plantilla ya lista? Descarga
+      <a href="{{ url_for('documentos.plantilla_ejemplo') }}">el oficio de comité tutorial</a> — es una
+      plantilla real, en uso, con el membrete intacto y variables ya escritas en el cuerpo.
+    </p>
+
+    <div class="campo" style="margin-bottom:12px; max-width:360px;">
+      <label>Buscar variable</label>
+      <input type="text" id="buscar-variable" placeholder="ej. nombre, código, correo...">
+    </div>
+
+    <div style="display:grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 16px;">
+      {% for grupo, campos in variables_buscables | groupby("grupo") %}
+        <div data-grupo-variables>
+          <h3 style="font-size:12px; text-transform:uppercase; letter-spacing:0.03em; color:var(--texto-suave); margin:0 0 8px;">{{ grupo }}</h3>
+          <table style="width:100%;">
+            <tbody>
+              {% for v in campos %}
+                <tr data-fila-variable data-nombre="{{ (v.clave ~ ' ' ~ v.etiqueta) | lower }}">
+                  <td style="padding:4px 8px 4px 0; white-space:nowrap;"><code>{{ '{{ ' ~ v.clave ~ ' }}' }}</code></td>
+                  <td style="padding:4px 0; color:var(--texto-suave); font-size:13px;">
+                    {{ v.etiqueta }}{% if v.ejemplo %} — <em>ej: {{ v.ejemplo }}</em>{% endif %}
+                  </td>
+                </tr>
+              {% endfor %}
+            </tbody>
+          </table>
+        </div>
+      {% endfor %}
+    </div>
+
+    <h3 style="font-size:12px; text-transform:uppercase; letter-spacing:0.03em; color:var(--texto-suave); margin:20px 0 8px;">Listas (usar dentro de un bucle, no solas)</h3>
+    <ul class="lista-simple">
+      {% for l in listas_disponibles %}
+        <li><code>{{ l.clave }}</code> — {{ l.etiqueta }}</li>
+      {% endfor %}
+    </ul>
+  </div>
+
+  <script>
+    document.getElementById("buscar-variable").addEventListener("input", function (evento) {
+      var texto = evento.target.value.trim().toLowerCase();
+      document.querySelectorAll("#catalogo-variables [data-grupo-variables]").forEach(function (grupo) {
+        var filas = grupo.querySelectorAll("[data-fila-variable]");
+        var algunaVisible = false;
+        filas.forEach(function (fila) {
+          var visible = !texto || fila.dataset.nombre.indexOf(texto) !== -1;
+          fila.style.display = visible ? "" : "none";
+          if (visible) algunaVisible = true;
+        });
+        grupo.style.display = algunaVisible ? "" : "none";
+      });
+    });
+  </script>
 {% endblock %}

@@ -3,32 +3,9 @@
 {% block contenido %}
   <h1>Configuración</h1>
   <p class="subtitulo">Ajustes generales de la app — un solo lugar para lo que antes se repetía en cada formulario.</p>
-
-  <div class="panel">
-    <h2>General</h2>
-    <form method="post" class="formulario">
-      {{ csrf_input() }}
-      <div class="campo">
-        <label>Coordinador(a) por defecto</label>
-        <input type="text" name="coordinador_nombre" value="{{ config.coordinador_nombre }}">
-        <p class="vacio" style="margin-top:4px;">Se precarga en todos los formularios de generación de documentos.</p>
-      </div>
-      <div class="campo">
-        <label>Ciclo escolar actual (dejar vacío para calcularlo solo por fecha)</label>
-        <input type="text" name="ciclo_escolar_actual" value="{{ config.ciclo_escolar_actual }}" placeholder="ej. 2026 B">
-      </div>
-      <div class="campo">
-        <label>Lema institucional del año (dejar vacío para no imprimirlo en los oficios)</label>
-        <input type="text" name="lema_ciclo" value="{{ config.lema_ciclo }}" placeholder='ej. "2026, Guadalajara, hogar de la Feria Internacional del Libro..."'>
-      </div>
-      <div class="acciones-form">
-        <button class="btn" type="submit">Guardar</button>
-      </div>
-    </form>
-  </div>
-
-  {# Folios de oficios y constancias: se agrega en la Fase 6 (Documentos),
-     cuando exista el app `documentos` con FolioSecuencia portado. #}
+  <p class="subtitulo">El coordinador(a) por defecto, el ciclo escolar actual y el lema institucional se
+    configuran ahora en <a href="{{ url_for('documentos.index') }}">Documentos</a>, junto con lo demás
+    relacionado a la generación de oficios y constancias.</p>
 
   <div class="panel">
     <h2>Respaldos</h2>

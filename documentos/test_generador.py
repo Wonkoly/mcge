@@ -1,3 +1,4 @@
+import io
 from datetime import date
 
 import docx
@@ -147,17 +148,16 @@ def test_generar_acta_produce_docx_valido(alumno_de_prueba, profesor_de_prueba):
 
 @pytest.mark.django_db
 def test_generar_documento_personalizado_sustituye_y_valida_campos(settings, tmp_path, alumno_de_prueba):
+    from django.core.files.uploadedfile import SimpleUploadedFile
+
     settings.PLANTILLAS_DIR = tmp_path
     doc = docx.Document()
-    doc.add_paragraph("MEMBRETE")
-    doc.save(tmp_path / "base_oficio.docx")
-    from documentos.models import PlantillaBase
+    doc.add_paragraph("Alumno: {{ alumno_nombre }} — {{ destinatario_nombre }}")
+    buffer_plantilla = io.BytesIO()
+    doc.save(buffer_plantilla)
+    archivo = SimpleUploadedFile("plantilla.docx", buffer_plantilla.getvalue())
 
-    PlantillaBase.objects.create(categoria="oficio", archivo="base_oficio.docx")
-
-    tipo_documento = tipos.crear_tipo(etiqueta="Prueba Generador", categoria="oficio")
-    tipos.actualizar_cuerpo(tipo_documento, "Alumno: {{ alumno_nombre }} — {{ destinatario_nombre }}")
-    tipos.confirmar_tipo(tipo_documento)
+    tipo_documento = tipos.crear_tipo(etiqueta="Prueba Generador", categoria="oficio", archivo=archivo)
 
     acta = Acta.objects.create(numero="MCG/10/2026", anio=2026)
     punto = PuntoActa.objects.create(
@@ -173,17 +173,16 @@ def test_generar_documento_personalizado_sustituye_y_valida_campos(settings, tmp
 
 @pytest.mark.django_db
 def test_generar_documento_personalizado_lanza_error_si_faltan_campos(settings, tmp_path, alumno_de_prueba):
+    from django.core.files.uploadedfile import SimpleUploadedFile
+
     settings.PLANTILLAS_DIR = tmp_path
     doc = docx.Document()
-    doc.add_paragraph("MEMBRETE")
-    doc.save(tmp_path / "base_oficio.docx")
-    from documentos.models import PlantillaBase
+    doc.add_paragraph("Destinatario: {{ destinatario_nombre }}")
+    buffer_plantilla = io.BytesIO()
+    doc.save(buffer_plantilla)
+    archivo = SimpleUploadedFile("plantilla.docx", buffer_plantilla.getvalue())
 
-    PlantillaBase.objects.create(categoria="oficio", archivo="base_oficio.docx")
-
-    tipo_documento = tipos.crear_tipo(etiqueta="Prueba Faltante", categoria="oficio")
-    tipos.actualizar_cuerpo(tipo_documento, "Destinatario: {{ destinatario_nombre }}")
-    tipos.confirmar_tipo(tipo_documento)
+    tipo_documento = tipos.crear_tipo(etiqueta="Prueba Faltante", categoria="oficio", archivo=archivo)
 
     acta = Acta.objects.create(numero="MCG/11/2026", anio=2026)
     punto = PuntoActa.objects.create(acta=acta, orden=1, tipo="personalizado", titulo="Prueba", tipo_documento=tipo_documento)
