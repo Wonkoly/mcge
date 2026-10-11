@@ -4,6 +4,7 @@ __pycache__/
 
 # Datos reales de alumnos/profesores (personal, sensible) — no se versiona.
 data/*.db*
+data/exports/
 backups/
 Docs/
 
